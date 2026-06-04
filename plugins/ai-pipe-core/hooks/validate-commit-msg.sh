@@ -40,11 +40,16 @@ CMD=$(jq -r '.tool_input.command // empty' <<<"$INPUT")
 MSG=""
 
 # Case A (highest priority): heredoc form `$(cat <<'TAG' ... TAG)`.
-# Must be checked FIRST so the opening `$(cat ...` isn't captured as a
-# bare token by Case B/C/D. `<` is not an ERE metachar so no backslash escape
-# (bash regex follows POSIX ERE, where `\<` is undefined or matches literal).
-# The tag is captured so we can find the matching closing line.
-if [[ "$CMD" =~ \<\<-?[\'\"]*([A-Za-z_][A-Za-z0-9_]*)[\'\"]* ]]; then # NOTE: `\<` is intentional shell-escape to satisfy older bash builds that flag bare `<`; ERE-semantically equivalent to `<`
+# Must be checked FIRST so the opening `$(cat ...` isn't captured as a bare
+# token by Case B/C/D. The tag is captured so we can find the closing line.
+#
+# Regex note: the `\<` backslashes are historical — bash ERE treats both `<`
+# and `\<` as literal `<` (POSIX ERE: `<` is not a metachar; `\<` is undefined
+# and falls back to literal). Earlier round commit messages announced removing
+# the backslashes but never did; the two forms are functionally identical on
+# every bash build we test (3.2 and 5.x). Kept as-is to avoid changing a
+# semantic we don't strictly own across all libc regex implementations.
+if [[ "$CMD" =~ \<\<-?[\'\"]*([A-Za-z_][A-Za-z0-9_]*)[\'\"]* ]]; then
   HEREDOC_TAG="${BASH_REMATCH[1]}"
   MSG=$(printf '%s\n' "$CMD" \
     | TAG="$HEREDOC_TAG" awk '
@@ -54,15 +59,17 @@ if [[ "$CMD" =~ \<\<-?[\'\"]*([A-Za-z_][A-Za-z0-9_]*)[\'\"]* ]]; then # NOTE: `\
 fi
 
 # Case B: --message="msg" or --message "msg" (quoted long form).
+# Left-anchored `(^|[[:space:]])` for the same defensive reason as Case C/D:
+# unanchored `--message=` could match substrings of unknown future flags.
 if [[ -z "$MSG" ]]; then
-  if [[ "$CMD" =~ --message=\"([^\"]+)\" ]]; then
-    MSG="${BASH_REMATCH[1]}"
-  elif [[ "$CMD" =~ --message=\'([^\']+)\' ]]; then
-    MSG="${BASH_REMATCH[1]}"
-  elif [[ "$CMD" =~ --message[[:space:]]+\"([^\"]+)\" ]]; then
-    MSG="${BASH_REMATCH[1]}"
-  elif [[ "$CMD" =~ --message[[:space:]]+\'([^\']+)\' ]]; then
-    MSG="${BASH_REMATCH[1]}"
+  if [[ "$CMD" =~ (^|[[:space:]])--message=\"([^\"]+)\" ]]; then
+    MSG="${BASH_REMATCH[2]}"
+  elif [[ "$CMD" =~ (^|[[:space:]])--message=\'([^\']+)\' ]]; then
+    MSG="${BASH_REMATCH[2]}"
+  elif [[ "$CMD" =~ (^|[[:space:]])--message[[:space:]]+\"([^\"]+)\" ]]; then
+    MSG="${BASH_REMATCH[2]}"
+  elif [[ "$CMD" =~ (^|[[:space:]])--message[[:space:]]+\'([^\']+)\' ]]; then
+    MSG="${BASH_REMATCH[2]}"
   fi
 fi
 
@@ -89,10 +96,10 @@ fi
 # Same left-anchor discipline as Case C so `--merge` / `--max-count=10` etc.
 # don't get their inner `m` captured (round-2 regression).
 if [[ -z "$MSG" ]]; then
-  if [[ "$CMD" =~ --message=([^[:space:]\'\"]+) ]]; then
-    MSG="${BASH_REMATCH[1]}"
-  elif [[ "$CMD" =~ --message[[:space:]]+([^[:space:]\'\"-][^[:space:]\'\"]*) ]]; then
-    MSG="${BASH_REMATCH[1]}"
+  if [[ "$CMD" =~ (^|[[:space:]])--message=([^[:space:]\'\"]+) ]]; then
+    MSG="${BASH_REMATCH[2]}"
+  elif [[ "$CMD" =~ (^|[[:space:]])--message[[:space:]]+([^[:space:]\'\"-][^[:space:]\'\"]*) ]]; then
+    MSG="${BASH_REMATCH[2]}"
   elif [[ "$CMD" =~ (^|[[:space:]])-[aA]?m([A-Za-z0-9][^[:space:]\'\"]*) ]]; then
     # -mTOKEN (no space). Don't match -m alone or -m followed by quote.
     MSG="${BASH_REMATCH[2]}"
