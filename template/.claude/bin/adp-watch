@@ -1,0 +1,21 @@
+#!/usr/bin/env bash
+# TODO: spec §12.2 — real-time pipeline event viewer.
+# Tails .artifacts/runs/{slug}-events.jsonl and pretty-prints with jq.
+# See spec §12.2 for the full reference implementation.
+
+set -euo pipefail
+
+SLUG="${1:-}"
+if [[ -z "$SLUG" ]]; then
+  echo "Usage: adp-watch <slug>" >&2
+  exit 64
+fi
+
+EVENTS_FILE=".artifacts/runs/${SLUG}-events.jsonl"
+if [[ ! -f "$EVENTS_FILE" ]]; then
+  echo "No events yet at $EVENTS_FILE" >&2
+  exit 1
+fi
+
+echo "TODO: pretty-print events. For now, raw tail:" >&2
+tail -f "$EVENTS_FILE"

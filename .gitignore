@@ -1,0 +1,25 @@
+# Node
+node_modules/
+dist/
+*.log
+npm-debug.log*
+
+# Build artifacts (spec §5.2 — artifact layer must never be committed)
+.artifacts/
+
+# Local config overrides (spec §8.3 — protected/local files)
+*.local.json
+.claude/worktrees/
+.claude/.current-agent
+.claude/config/stack/*.json
+.claude/config/conventions/
+
+# IDE / OS
+.DS_Store
+.vscode/
+.idea/
+
+# Credentials — never commit
+.npmrc.local
+*.pem
+*.key

@@ -1,0 +1,7 @@
+{
+  "$comment": "Rename to settings.local.json. This file is git-ignored (spec §8.3). Use it to grant per-developer permissions without touching the shared settings.json.",
+  "permissions": {
+    "allow": [],
+    "deny": []
+  }
+}

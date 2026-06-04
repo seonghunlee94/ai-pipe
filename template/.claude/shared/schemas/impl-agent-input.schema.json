@@ -1,0 +1,32 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "impl-agent-input.schema.json",
+  "title": "Implementation Agent Input",
+  "description": "Spec §11.1 — input contract for backend-eng, frontend-eng, infra-eng.",
+  "type": "object",
+  "required": [
+    "task_id",
+    "feature_branch",
+    "task_branch",
+    "story_number",
+    "issue_number",
+    "downstream_notes"
+  ],
+  "properties": {
+    "task_id": {
+      "type": "string",
+      "pattern": "^T-[0-9]+$"
+    },
+    "feature_branch": { "type": "string" },
+    "task_branch": { "type": "string" },
+    "story_number": { "type": "integer", "minimum": 1 },
+    "issue_number": { "type": "integer", "minimum": 1 },
+    "short_name": { "type": "string", "maxLength": 8 },
+    "task_title": { "type": "string" },
+    "downstream_notes": {
+      "type": "object",
+      "description": "이전 task 로부터의 정보 (null 불가, 빈 object 는 허용)"
+    }
+  },
+  "additionalProperties": false
+}

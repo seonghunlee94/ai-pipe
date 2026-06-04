@@ -1,0 +1,12 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "impl-agent-output.schema.json",
+  "title": "Implementation Agent Output (stub)",
+  "description": "TODO: spec §11.1 — fill in full schema. See backend-eng.md for current fields used.",
+  "type": "object",
+  "required": ["status", "task_id"],
+  "properties": {
+    "status": { "enum": ["success", "failure", "partial"] },
+    "task_id": { "type": "string" }
+  }
+}

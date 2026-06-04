@@ -1,0 +1,44 @@
+{
+  "$comment": "Spec §7.1 — Claude Code harness settings. All 5 hooks from spec §7.3 are wired. Hooks require jq (brew install jq). See .claude/hooks/*.sh for behavior.",
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": ".claude/hooks/verify-boundary.sh"
+          }
+        ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": ".claude/hooks/verify-git-safety.sh"
+          },
+          {
+            "type": "command",
+            "command": ".claude/hooks/validate-commit-msg.sh"
+          },
+          {
+            "type": "command",
+            "command": ".claude/hooks/ban-background.sh"
+          }
+        ]
+      },
+      {
+        "matcher": "Agent",
+        "hooks": [
+          {
+            "type": "command",
+            "command": ".claude/hooks/validate-subagent-type.sh"
+          }
+        ]
+      }
+    ]
+  },
+  "permissions": {},
+  "env": {}
+}

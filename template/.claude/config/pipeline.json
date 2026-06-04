@@ -1,0 +1,33 @@
+{
+  "_version": "0.1",
+  "$comment": "Spec §8.1. Edit these values per project. Local overrides go in pipeline.local.json (git-ignored).",
+  "limits": {
+    "max_retries": 3,
+    "global_max_retries": 5,
+    "global_max_elapsed_min": 120,
+    "max_test": 3,
+    "max_lint": 2,
+    "thrash_consecutive": 3
+  },
+  "paths": {
+    "artifacts": ".artifacts",
+    "conventions_dir": "docs/conventions",
+    "scripts_dir": ".claude/scripts"
+  },
+  "project_board": {
+    "statuses": {
+      "backlog": "Backlog",
+      "in_progress": "In progress",
+      "in_review": "In Review",
+      "done": "Done"
+    }
+  },
+  "vcs": {
+    "default_branch": "main",
+    "task_branch_pattern": "task/{short}-{issue}-{n}-{title}",
+    "feature_branch_pattern": "feat/{short}-{issue}-{title}"
+  },
+  "review": {
+    "depth": "standard"
+  }
+}

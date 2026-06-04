@@ -1,0 +1,42 @@
+{
+  "name": "@your-org/ai-pipe",
+  "version": "0.0.1",
+  "description": "Multi-agent automation pipeline CLI for Claude Code. Scaffolding stage — see README for status.",
+  "type": "module",
+  "bin": {
+    "ai-pipe": "dist/cli.js"
+  },
+  "files": [
+    "dist",
+    "template",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "prepublishOnly": "npm run build",
+    "test": "echo \"no tests yet — see spec §2 (Vitest planned)\" && exit 0"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "devDependencies": {
+    "typescript": "^5.4.0",
+    "@types/node": "^20.11.0"
+  },
+  "publishConfig": {
+    "registry": "https://npm.pkg.github.com",
+    "access": "restricted"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/your-org/ai-pipe.git"
+  },
+  "keywords": [
+    "claude-code",
+    "multi-agent",
+    "pipeline",
+    "orchestration"
+  ],
+  "license": "UNLICENSED",
+  "private": false
+}
