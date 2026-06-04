@@ -17,9 +17,12 @@ INPUT=$(cat)
 CMD=$(jq -r '.tool_input.command // empty' <<<"$INPUT")
 
 # Not a git command → pass through. Matches `git ...` at command start, after
-# a separator (; && || |), after whitespace, or via an absolute path
-# (e.g. /usr/bin/git, /opt/homebrew/bin/git).
-[[ "$CMD" =~ (^|[[:space:]]|;|&&|\|\|?|/)git[[:space:]] ]] || exit 0
+# a separator (; && || |), or via an absolute / relative path
+# (e.g. /usr/bin/git, /opt/homebrew/bin/git, ./scripts/git).
+# A single `/` alone wouldn't reliably indicate a git executable, so we require
+# the path component to immediately precede `git` with no whitespace between
+# them, ruling out coincidences like `cd path/git push-aside`.
+[[ "$CMD" =~ (^|[[:space:]]|;|\&\&|\|\|?)([^[:space:]]*/)?git[[:space:]] ]] || exit 0
 
 block() {
   echo "BLOCKED: $1" >&2

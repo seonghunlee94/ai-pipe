@@ -1,10 +1,19 @@
 #!/usr/bin/env node
 // Entry point. Custom mini-parser per spec §2 — no external CLI libraries.
 
+import { runMigrate } from "./conventions/migrate.js";
+import { runDetect } from "./detect.js";
+import { runDiff } from "./diff.js";
 import { AiPipeError } from "./errors.js";
-import { readPackageInfo } from "./utils.js";
 import { runInit } from "./init.js";
+import { runPipeline } from "./pipeline/commands.js";
+import { runPreflight } from "./preflight.js";
+import { runUpdate } from "./update.js";
+import { runUpgrade } from "./upgrade.js";
+import { readPackageInfo } from "./utils.js";
+import { runValidate } from "./validate.js";
 import { runVersion } from "./version.js";
+import { runVersions } from "./versions.js";
 
 const HELP = `\
 ai-pipe — multi-agent automation pipeline (scaffolding stage)
@@ -21,8 +30,26 @@ Commands:
 Not yet implemented (stubs — see src/ and spec §):
   update     §9.3   upgrade    §9.4   diff       §9.3
   preflight  §13.3  detect     §3.2   validate   §11
-  pipeline   §8.1   versions   §9.1
+  pipeline   §8.1   versions   §9.1   migrate    §14
 `;
+
+// Single source of truth for command routing. Stub commands dispatch to their
+// own files, which throw AiPipeError(E_NOT_IMPLEMENTED, ..., 2). This keeps
+// the "not implemented" message in one place per command and lets future PRs
+// flesh out the stub by editing only its own file.
+const COMMANDS: Record<string, (args: string[]) => Promise<void>> = {
+  init: runInit,
+  version: runVersion,
+  update: runUpdate,
+  upgrade: runUpgrade,
+  diff: runDiff,
+  preflight: runPreflight,
+  detect: runDetect,
+  validate: runValidate,
+  versions: runVersions,
+  pipeline: runPipeline,
+  migrate: runMigrate,
+};
 
 async function main(): Promise<void> {
   const argv = process.argv.slice(2);
@@ -39,27 +66,11 @@ async function main(): Promise<void> {
     return;
   }
 
-  switch (cmd) {
-    case "init":
-      return runInit(rest);
-    case "version":
-      return runVersion(rest);
-    case "update":
-    case "upgrade":
-    case "diff":
-    case "preflight":
-    case "detect":
-    case "validate":
-    case "versions":
-    case "pipeline":
-      throw new AiPipeError(
-        "E_NOT_IMPLEMENTED",
-        `\`${cmd}\` is a stub. See src/${cmd}.ts and multi-agent-pipeline-best-practices.md.`,
-        2,
-      );
-    default:
-      throw new AiPipeError("E_BAD_USAGE", `Unknown command: ${cmd}\n\n${HELP}`, 2);
+  const handler = COMMANDS[cmd];
+  if (!handler) {
+    throw new AiPipeError("E_BAD_USAGE", `Unknown command: ${cmd}\n\n${HELP}`, 2);
   }
+  await handler(rest);
 }
 
 main().catch((err: unknown) => {

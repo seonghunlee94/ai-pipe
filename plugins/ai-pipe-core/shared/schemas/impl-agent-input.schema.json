@@ -1,6 +1,7 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "https://github.com/your-org/ai-pipe/schemas/impl-agent-input.schema.json",
+  "$comment": "$id contains the `your-org` placeholder; replace before publishing via the sed recipe in README §0. The $id is not externally dereferenced until then.",
   "title": "Implementation Agent Input",
   "description": "Spec §11.1 — input contract for backend-eng, frontend-eng, infra-eng. additionalProperties:false catches typos like task_idd; declare new optional inputs in properties.",
   "type": "object",

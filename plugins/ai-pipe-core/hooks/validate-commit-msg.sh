@@ -5,18 +5,23 @@
 # Allowed types: feat fix docs chore refactor test perf ci build revert style.
 #
 # Supported forms (all checked):
-#   git commit -m "msg"        # double-quoted
-#   git commit -m 'msg'        # single-quoted
-#   git commit -m"msg"         # no space (POSIX getopt)
+#   git commit -m "msg"            # double-quoted
+#   git commit -m 'msg'            # single-quoted
+#   git commit -m"msg"             # no space
 #   git commit -am "msg"
+#   git commit -mTOKEN             # bare token, no quotes (bash allows when
+#                                  # no special chars are present)
+#   git commit -m TOKEN
 #   git commit --message "msg"
-#   git commit --message="msg"
-#   git commit -m "$(cat <<'EOF' ... EOF)"  # heredoc (CLAUDE.md pattern)
+#   git commit --message='msg'
+#   git commit --message=TOKEN     # bare token after =
+#   git commit -m "$(cat <<'TAG' ... TAG)"  # heredoc with arbitrary tag
+#                                           # (TAG can be EOF, MSGEOF, END, etc.)
 #
 # Skipped (no inline message we can read):
 #   git commit -F file
 #   git commit --no-edit
-#   git commit --amend (separate hook handles this)
+#   git commit --amend (verify-git-safety.sh handles this)
 # Exit: 2 = block (Claude Code shows stderr to model), 0 = pass.
 
 set -euo pipefail
@@ -34,17 +39,21 @@ CMD=$(jq -r '.tool_input.command // empty' <<<"$INPUT")
 
 MSG=""
 
-# Case A (highest priority): heredoc form `$(cat <<'EOF' ... EOF)`.
+# Case A (highest priority): heredoc form `$(cat <<'TAG' ... TAG)`.
 # Must be checked FIRST so the opening `$(cat ...` isn't captured as a
-# simple -m "msg" by Case B. `<` is not a regex metachar in bash; no escape.
-if [[ "$CMD" =~ \<\<-?[\'\"]*EOF[\'\"]* ]]; then
-  MSG=$(printf '%s\n' "$CMD" | awk '
-    /<<-?[A-Za-z'\''"]*EOF/ { found_open = 1; next }
-    found_open && NF { print; exit }
-  ')
+# bare token by Case B/C/D. `<` is not an ERE metachar so no backslash escape
+# (bash regex follows POSIX ERE, where `\<` is undefined or matches literal).
+# The tag is captured so we can find the matching closing line.
+if [[ "$CMD" =~ \<\<-?[\'\"]*([A-Za-z_][A-Za-z0-9_]*)[\'\"]* ]]; then
+  HEREDOC_TAG="${BASH_REMATCH[1]}"
+  MSG=$(printf '%s\n' "$CMD" \
+    | TAG="$HEREDOC_TAG" awk '
+      $0 ~ ("<<-?[\"'\''A-Za-z_]*" ENVIRON["TAG"]) { found_open = 1; next }
+      found_open && NF { print; exit }
+    ')
 fi
 
-# Case B: --message="msg" or --message "msg" (long form).
+# Case B: --message="msg" or --message "msg" (quoted long form).
 if [[ -z "$MSG" ]]; then
   if [[ "$CMD" =~ --message=\"([^\"]+)\" ]]; then
     MSG="${BASH_REMATCH[1]}"
@@ -57,8 +66,7 @@ if [[ -z "$MSG" ]]; then
   fi
 fi
 
-# Case C: short form -m / -am with or without space, with double or single
-# quotes. The `-[aA]?m` allows `-m`, `-am`, `-Am`.
+# Case C: short form -m / -am with double or single quotes.
 if [[ -z "$MSG" ]]; then
   if [[ "$CMD" =~ -[aA]?m[[:space:]]*\"([^\"]+)\" ]]; then
     CANDIDATE="${BASH_REMATCH[1]}"
@@ -66,6 +74,25 @@ if [[ -z "$MSG" ]]; then
     # of a subshell/heredoc that Case A failed to parse. Treat as no message.
     [[ "$CANDIDATE" != \$\(* ]] && MSG="$CANDIDATE"
   elif [[ "$CMD" =~ -[aA]?m[[:space:]]*\'([^\']+)\' ]]; then
+    MSG="${BASH_REMATCH[1]}"
+  fi
+fi
+
+# Case D: UNQUOTED bare-token forms — `-mTOKEN`, `-m TOKEN`, `--message=TOKEN`,
+# `--message TOKEN`. Token has no whitespace/quotes (bash doesn't require
+# quoting when no special chars are present). These almost always fail the
+# Conventional Commits regex (no space-separated subject), so users hitting
+# this branch see a clear BLOCKED message instead of a silent pass.
+if [[ -z "$MSG" ]]; then
+  if [[ "$CMD" =~ --message=([^[:space:]\'\"]+) ]]; then
+    MSG="${BASH_REMATCH[1]}"
+  elif [[ "$CMD" =~ --message[[:space:]]+([^[:space:]\'\"-][^[:space:]\'\"]*) ]]; then
+    MSG="${BASH_REMATCH[1]}"
+  elif [[ "$CMD" =~ -[aA]?m([A-Za-z0-9][^[:space:]\'\"]*) ]]; then
+    # -mTOKEN (no space). Don't match -m alone or -m followed by quote.
+    MSG="${BASH_REMATCH[1]}"
+  elif [[ "$CMD" =~ -[aA]?m[[:space:]]+([^[:space:]\'\"-][^[:space:]\'\"]*) ]]; then
+    # -m TOKEN (space + bare token, not starting with - to avoid flags).
     MSG="${BASH_REMATCH[1]}"
   fi
 fi
