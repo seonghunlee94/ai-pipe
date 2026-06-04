@@ -37,6 +37,15 @@ DISALLOWED_PATTERNS=(
   '(^|[[:space:]])bazel[[:space:]]+(test|build)'
 )
 
+# Watcher / dev-server modes are legitimate backgrounding (the whole point is
+# long-running). If any of these flags appear in the command, skip the block
+# check — comment at top says watchers are allowed and we should keep that
+# promise.
+WATCHER_INDICATORS='(--watch|--watchAll|-w[[:space:]]|--ui|--serve|--dev|--hot)'
+if [[ "$CMD" =~ $WATCHER_INDICATORS ]]; then
+  exit 0
+fi
+
 for PAT in "${DISALLOWED_PATTERNS[@]}"; do
   if [[ "$CMD" =~ $PAT ]]; then
     cat >&2 <<EOF

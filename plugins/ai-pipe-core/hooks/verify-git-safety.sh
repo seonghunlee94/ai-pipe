@@ -59,8 +59,11 @@ if [[ "$CMD" =~ git[[:space:]]+clean[[:space:]]+(.*[[:space:]])?-[a-zA-Z]*f ]]; 
   block "git clean -f" "removes untracked files irreversibly; review with -n first"
 fi
 
-# git checkout . / git restore . (discards working tree changes)
-if [[ "$CMD" =~ git[[:space:]]+(checkout|restore)[[:space:]]+(--[[:space:]]+)?\. ]]; then
+# git checkout . / git restore . (discards working tree changes).
+# Require `.` to be a standalone argument — without the end anchor
+# `([[:space:]]|$)`, the pattern matches `.env`, `.gitignore`,
+# `.github/workflows/x.yml`, falsely blocking legitimate dotfile restores.
+if [[ "$CMD" =~ git[[:space:]]+(checkout|restore)[[:space:]]+(--[[:space:]]+)?\.([[:space:]]|$) ]]; then
   block "git ${BASH_REMATCH[1]} . discards working tree" "use specific paths instead of '.'"
 fi
 
