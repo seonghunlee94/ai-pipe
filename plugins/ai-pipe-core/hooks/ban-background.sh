@@ -6,6 +6,7 @@
 #
 # Rationale: a backgrounded test run gives the agent a fake "passing" signal
 # because the result isn't checked synchronously. Same for builds.
+# Exit: 2 = block, 0 = pass.
 
 set -euo pipefail
 
@@ -16,17 +17,23 @@ fi
 
 INPUT=$(cat)
 BG=$(jq -r '.tool_input.run_in_background // false' <<<"$INPUT")
-CMD=$(jq -r '.tool_input.command // empty' <<<"$INPUT")
+CMD_ORIG=$(jq -r '.tool_input.command // empty' <<<"$INPUT")
 
 # Not backgrounded → no concern.
 [[ "$BG" == "true" ]] || exit 0
-[[ -n "$CMD" ]] || exit 0
+[[ -n "$CMD_ORIG" ]] || exit 0
+
+# Normalize subshell / backtick wrappers to spaces — same approach as
+# verify-git-safety.sh so `(vite build)`, `$(npm test)`, `` `vitest` ``
+# resolve to their bare form and the patterns below match.
+CMD="${CMD_ORIG//\`/ }"
+CMD="${CMD//\$(/ }"
+CMD="${CMD//(/ }"
+CMD="${CMD//)/ }"
 
 # Patterns where background is almost always wrong.
 DISALLOWED_PATTERNS=(
-  'npm[[:space:]]+(run[[:space:]]+)?(test|build|lint|typecheck|tsc)'
-  'yarn[[:space:]]+(test|build|lint|typecheck|tsc)'
-  'pnpm[[:space:]]+(test|build|lint|typecheck|tsc)'
+  '(npm|yarn|pnpm)[[:space:]]+(run[[:space:]]+)?(test|build|lint|typecheck|tsc)'
   '(^|[[:space:]])tsc([[:space:]]|$)'
   '(^|[[:space:]])(eslint|prettier|biome)([[:space:]]|$)'
   '(^|[[:space:]])(vitest|jest|mocha)([[:space:]]+run)?'
@@ -35,8 +42,9 @@ DISALLOWED_PATTERNS=(
   '(^|[[:space:]])(make|gradle|mvn)([[:space:]]+(test|build|check|verify|install))'
   '(^|[[:space:]]|\./)(gradlew|mvnw)([[:space:]]+(test|build|check|verify|install))'
   '(^|[[:space:]])bazel[[:space:]]+(test|build)'
-  # Bundlers / build tools (their watcher / dev-server modes are allowed above
-  # via WATCHER_FLAGS / WATCHER_TOOLS; reaching this list means non-watcher).
+  # Bundlers / build tools (their watcher / dev-server modes are allowed
+  # below via WATCHER_FLAGS / WATCHER_TOOLS; reaching this list means
+  # non-watcher.)
   '(^|[[:space:]])(webpack|vite|esbuild|rollup|parcel|tsup)([[:space:]]|$)'
 )
 
@@ -51,8 +59,8 @@ DISALLOWED_PATTERNS=(
 #    have non-watcher subcommands (`vite build`), so we require the watcher
 #    subcommand to be present.
 #
-# `-w` alone is too overloaded (`grep -w`, `xargs -w`, ...) to use as a watcher
-# signal; agents should write the long form when they want background.
+# `-w` alone is too overloaded (`grep -w`, `xargs -w`, ...) to use as a
+# watcher signal; agents should write the long form when they want background.
 WATCHER_FLAGS='(--watch|--watchAll)([[:space:]]|$)'
 WATCHER_TOOLS='(^|[[:space:]])(nodemon|webpack-dev-server|webpack[[:space:]]+serve|vite[[:space:]]+(dev|serve)|next[[:space:]]+dev|astro[[:space:]]+dev|remix[[:space:]]+dev|tsx[[:space:]]+watch)([[:space:]]|$)'
 if [[ "$CMD" =~ $WATCHER_FLAGS ]] || [[ "$CMD" =~ $WATCHER_TOOLS ]]; then
@@ -62,7 +70,7 @@ fi
 for PAT in "${DISALLOWED_PATTERNS[@]}"; do
   if [[ "$CMD" =~ $PAT ]]; then
     cat >&2 <<EOF
-BLOCKED: \`$CMD\` should not run in background.
+BLOCKED: \`$CMD_ORIG\` should not run in background.
   reason: a backgrounded build/test/lint hides failures from the agent.
   fix:    run it in foreground (omit run_in_background, or set it to false).
 EOF

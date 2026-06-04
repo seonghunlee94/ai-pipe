@@ -14,23 +14,35 @@ if ! command -v jq >/dev/null 2>&1; then
 fi
 
 INPUT=$(cat)
-CMD=$(jq -r '.tool_input.command // empty' <<<"$INPUT")
+CMD_ORIG=$(jq -r '.tool_input.command // empty' <<<"$INPUT")
+
+# Normalize subshell / command-substitution / backtick wrappers to spaces so a
+# single set of regex patterns covers all of them. Backticks especially can't
+# be safely placed in a bash regex literal — they're command-substitution
+# metacharacters inside `[[ ]]`. After normalization:
+#   `(git push --force)`      → ` git push --force `
+#   `$(git push --force)`     → ` git push --force `
+#   `` `git push --force` ``  → ` git push --force `
+#   `(cd dir && git push --force)` → ` cd dir && git push --force `
+# This closes the subshell-wrap bypass on both ends (R7 fix, symmetric with
+# R6's `)` in the dotfile end-anchor) without char-class gymnastics.
+CMD="${CMD_ORIG//\`/ }"
+CMD="${CMD//\$(/ }"
+CMD="${CMD//(/ }"
+CMD="${CMD//)/ }"
 
 # Not a git command → pass through. Matches `git ...` at command start, after
-# a separator (; && || |), or via an absolute / relative path
-# (e.g. /usr/bin/git, /opt/homebrew/bin/git, ./scripts/git).
+# a separator (`;`, `&&`, `||`, `|`), or via an absolute / relative path
+# (`/usr/bin/git`, `./scripts/git`). Subshell forms are pre-normalized.
 #
-# Note: a path-segment `git` like `cd path/git push-aside` still satisfies the
-# gate (the regex doesn't require a path prefix to be a real executable). That
-# is intentionally wide; the downstream block patterns all require
-# `git[[:space:]]+(push|reset|branch|clean|checkout|restore|commit)` so a bare
-# token like `push-aside` does not trigger a block. The gate is a fast filter,
-# not a final classifier.
+# A path-segment `git` like `cd path/git push-aside` still satisfies this fast
+# filter; the downstream block patterns all require `git[[:space:]]+(push|...)`
+# so a token like `push-aside` does not trigger a block.
 [[ "$CMD" =~ (^|[[:space:]]|;|\&\&|\|\|?)([^[:space:]]*/)?git[[:space:]] ]] || exit 0
 
 block() {
   echo "BLOCKED: $1" >&2
-  echo "  command: $CMD" >&2
+  echo "  command: $CMD_ORIG" >&2
   echo "  reason:  $2" >&2
   echo "  if intended, ask the user to run it manually." >&2
   exit 2
@@ -61,13 +73,13 @@ fi
 
 # git checkout . / git restore . (discards working tree changes).
 # Require `.` to be a STANDALONE argument. The end-of-token character class
-# includes whitespace AND every shell separator (`;`, `|`, `&`, `<`, `>`, `)`)
-# so chained commands like `git restore .;rm -rf .` don't slip through.
-# Without the separator chars, R5's end-anchor would only stop at whitespace
-# and let the destructive call ride a chain.
-# Dotfile paths like `.env`, `.gitignore`, `.github/workflows/x.yml` still pass
-# because the next char is alphanumeric, not in this set.
-if [[ "$CMD" =~ git[[:space:]]+(checkout|restore)[[:space:]]+(--[[:space:]]+)?\.([[:space:];\|\&\<\>\)]|$) ]]; then
+# includes whitespace AND every shell separator (`;`, `|`, `&`, `<`, `>`) so
+# chained commands like `git restore .;rm -rf .` don't slip through. (R7:
+# `)` no longer needed in the class because subshell wrappers are normalized
+# above into spaces.)
+# Dotfile paths like `.env`, `.gitignore`, `.github/workflows/x.yml` still
+# pass because the next char is alphanumeric, not in this set.
+if [[ "$CMD" =~ git[[:space:]]+(checkout|restore)[[:space:]]+(--[[:space:]]+)?\.([[:space:];\|\&\<\>]|$) ]]; then
   block "git ${BASH_REMATCH[1]} . discards working tree" "use specific paths instead of '.'"
 fi
 
