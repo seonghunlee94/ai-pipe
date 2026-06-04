@@ -1,8 +1,25 @@
+---
+name: boundary-enforcement
+description: |
+  Worktree isolation, protected files, git discipline, commit format,
+  background-execution rules, subagent invocation, test policy — the full
+  set of rules enforced by ai-pipe-core hooks. Auto-activates for impl
+  agents (backend/frontend/infra) and any task touching code.
+paths:
+  - "plugins/ai-pipe-core/agents/backend-eng.md"
+  - "plugins/ai-pipe-core/agents/frontend-eng.md"
+  - "plugins/ai-pipe-core/agents/infra-eng.md"
+  - "src/**/*.ts"
+  - "src/**/*.tsx"
+  - "src/**/*.js"
+  - "tests/**/*.ts"
+disable-model-invocation: false
+user-invocable: false
+---
+
 # Boundary Enforcement (SSOT)
 
-이 문서는 ai-pipe의 에이전트 경계 규칙의 단일 진실 원천(SSOT)이다. 모든 impl 에이전트(`backend-eng`, `frontend-eng`, `infra-eng`)는 `<!-- SHARED_REF: boundary-enforcement -->` 블록으로 이 문서를 참조한다.
-
-> **참고:** PR 2에서 이 문서는 `paths` frontmatter가 있는 Skill로 마이그레이션 예정. 그 시점부터 SHARED_REF 명시 참조는 자동 활성화로 대체된다.
+이 문서는 ai-pipe의 에이전트 경계 규칙의 단일 진실 원천(SSOT)이다. PR2부터는 `paths` frontmatter로 impl 에이전트와 소스 코드 작업 시 자동 활성화된다.
 
 ---
 

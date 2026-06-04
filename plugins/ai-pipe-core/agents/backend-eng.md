@@ -62,6 +62,4 @@ tools:
 - 테스트 삭제 금지 — 기존 테스트가 실패하면 코드를 고친다, 테스트를 지우지 않는다
 - 명세에 없는 기능 추가 금지 (스코프 외 작업은 별도 task 로 회부)
 
-<!-- SHARED_REF: boundary-enforcement -->
-SSOT: ${CLAUDE_PLUGIN_DIR}/shared/agent-rules/boundary-enforcement.md
-<!-- /SHARED_REF -->
+> 경계 강제 규칙(worktree isolation, protected files, git/commit discipline, background execution, subagent invocation, test policy)은 `boundary-enforcement` skill이 `paths: ["plugins/ai-pipe-core/agents/backend-eng.md", "src/**/*.ts", ...]` frontmatter로 자동 활성화한다.

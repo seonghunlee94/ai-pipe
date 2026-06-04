@@ -8,7 +8,7 @@
       "name": "ai-pipe-core",
       "description": "Core multi-agent pipeline: agents, hooks, commands, scripts. Includes PM, backend-eng, architect, QA, reviewer, verifier, project-ops roles plus 5 PreToolUse hooks.",
       "source": "./plugins/ai-pipe-core",
-      "version": "0.0.2",
+      "version": "0.0.3",
       "keywords": ["multi-agent", "pipeline", "orchestration", "github-projects"]
     }
   ]

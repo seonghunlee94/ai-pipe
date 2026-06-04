@@ -59,6 +59,4 @@ tools:
 - 사용자가 제시하지 않은 요구사항을 임의로 추가 금지 (가정이 필요하면 spec 내 "Assumptions" 섹션에 명시)
 - `downstream_notes` 를 null 로 두지 말 것 (spec §4.3, 최소 빈 object `{}`)
 
-<!-- SHARED_REF: common-agent-rules -->
-SSOT: ${CLAUDE_PLUGIN_DIR}/shared/agent-rules/index.md
-<!-- /SHARED_REF -->
+> 공통 규칙(identity, file boundaries, git discipline, ...)은 `common-agent-rules` skill이 `paths` frontmatter로 자동 활성화한다 — 이 파일에 다시 복제할 필요 없다.

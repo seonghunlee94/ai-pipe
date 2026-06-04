@@ -1,8 +1,21 @@
+---
+name: common-agent-rules
+description: |
+  Common rules every ai-pipe agent follows: identity, file boundaries, git
+  discipline, tool usage, output contracts, test policy, cost/caching,
+  escalation. Auto-activates on any subagent invocation in this plugin so
+  individual agent files don't have to repeat the rules.
+paths:
+  - "plugins/ai-pipe-core/agents/*.md"
+  - ".artifacts/specs/*.md"
+  - ".artifacts/plans/*.md"
+disable-model-invocation: false
+user-invocable: false
+---
+
 # Common Agent Rules (SSOT)
 
-이 문서는 모든 ai-pipe 에이전트가 따라야 할 공통 규칙의 단일 진실 원천(SSOT)이다. 각 에이전트 파일은 `<!-- SHARED_REF: common-agent-rules -->` 블록으로 이 문서를 참조한다.
-
-> **참고:** PR 2에서 이 문서는 `paths` frontmatter가 있는 Skill로 마이그레이션될 예정이다. 그 시점부터 명시적 SHARED_REF 참조는 자동 활성화로 대체된다.
+이 문서는 모든 ai-pipe 에이전트가 따라야 할 공통 규칙의 단일 진실 원천(SSOT)이다. PR2부터는 `paths` frontmatter로 자동 활성화되므로 명시적 SHARED_REF 참조는 더 이상 필요하지 않다.
 
 ---
 
