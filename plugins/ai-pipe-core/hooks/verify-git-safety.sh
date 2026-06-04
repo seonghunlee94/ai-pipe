@@ -19,9 +19,13 @@ CMD=$(jq -r '.tool_input.command // empty' <<<"$INPUT")
 # Not a git command → pass through. Matches `git ...` at command start, after
 # a separator (; && || |), or via an absolute / relative path
 # (e.g. /usr/bin/git, /opt/homebrew/bin/git, ./scripts/git).
-# A single `/` alone wouldn't reliably indicate a git executable, so we require
-# the path component to immediately precede `git` with no whitespace between
-# them, ruling out coincidences like `cd path/git push-aside`.
+#
+# Note: a path-segment `git` like `cd path/git push-aside` still satisfies the
+# gate (the regex doesn't require a path prefix to be a real executable). That
+# is intentionally wide; the downstream block patterns all require
+# `git[[:space:]]+(push|reset|branch|clean|checkout|restore|commit)` so a bare
+# token like `push-aside` does not trigger a block. The gate is a fast filter,
+# not a final classifier.
 [[ "$CMD" =~ (^|[[:space:]]|;|\&\&|\|\|?)([^[:space:]]*/)?git[[:space:]] ]] || exit 0
 
 block() {

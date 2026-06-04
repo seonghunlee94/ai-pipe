@@ -44,7 +44,7 @@ MSG=""
 # bare token by Case B/C/D. `<` is not an ERE metachar so no backslash escape
 # (bash regex follows POSIX ERE, where `\<` is undefined or matches literal).
 # The tag is captured so we can find the matching closing line.
-if [[ "$CMD" =~ \<\<-?[\'\"]*([A-Za-z_][A-Za-z0-9_]*)[\'\"]* ]]; then
+if [[ "$CMD" =~ \<\<-?[\'\"]*([A-Za-z_][A-Za-z0-9_]*)[\'\"]* ]]; then # NOTE: `\<` is intentional shell-escape to satisfy older bash builds that flag bare `<`; ERE-semantically equivalent to `<`
   HEREDOC_TAG="${BASH_REMATCH[1]}"
   MSG=$(printf '%s\n' "$CMD" \
     | TAG="$HEREDOC_TAG" awk '
@@ -67,14 +67,17 @@ if [[ -z "$MSG" ]]; then
 fi
 
 # Case C: short form -m / -am with double or single quotes.
+# Left anchor `(^|[[:space:]])` prevents matching the inner `m` of unrelated
+# long flags like `--merge`, `--max-count`, `--reuse-message`. BASH_REMATCH[1]
+# is the anchor, [2] is the message — note the shift from the unanchored form.
 if [[ -z "$MSG" ]]; then
-  if [[ "$CMD" =~ -[aA]?m[[:space:]]*\"([^\"]+)\" ]]; then
-    CANDIDATE="${BASH_REMATCH[1]}"
+  if [[ "$CMD" =~ (^|[[:space:]])-[aA]?m[[:space:]]*\"([^\"]+)\" ]]; then
+    CANDIDATE="${BASH_REMATCH[2]}"
     # Defensive: if the captured value starts with `$(` it's likely the head
     # of a subshell/heredoc that Case A failed to parse. Treat as no message.
     [[ "$CANDIDATE" != \$\(* ]] && MSG="$CANDIDATE"
-  elif [[ "$CMD" =~ -[aA]?m[[:space:]]*\'([^\']+)\' ]]; then
-    MSG="${BASH_REMATCH[1]}"
+  elif [[ "$CMD" =~ (^|[[:space:]])-[aA]?m[[:space:]]*\'([^\']+)\' ]]; then
+    MSG="${BASH_REMATCH[2]}"
   fi
 fi
 
@@ -83,17 +86,19 @@ fi
 # quoting when no special chars are present). These almost always fail the
 # Conventional Commits regex (no space-separated subject), so users hitting
 # this branch see a clear BLOCKED message instead of a silent pass.
+# Same left-anchor discipline as Case C so `--merge` / `--max-count=10` etc.
+# don't get their inner `m` captured (round-2 regression).
 if [[ -z "$MSG" ]]; then
   if [[ "$CMD" =~ --message=([^[:space:]\'\"]+) ]]; then
     MSG="${BASH_REMATCH[1]}"
   elif [[ "$CMD" =~ --message[[:space:]]+([^[:space:]\'\"-][^[:space:]\'\"]*) ]]; then
     MSG="${BASH_REMATCH[1]}"
-  elif [[ "$CMD" =~ -[aA]?m([A-Za-z0-9][^[:space:]\'\"]*) ]]; then
+  elif [[ "$CMD" =~ (^|[[:space:]])-[aA]?m([A-Za-z0-9][^[:space:]\'\"]*) ]]; then
     # -mTOKEN (no space). Don't match -m alone or -m followed by quote.
-    MSG="${BASH_REMATCH[1]}"
-  elif [[ "$CMD" =~ -[aA]?m[[:space:]]+([^[:space:]\'\"-][^[:space:]\'\"]*) ]]; then
+    MSG="${BASH_REMATCH[2]}"
+  elif [[ "$CMD" =~ (^|[[:space:]])-[aA]?m[[:space:]]+([^[:space:]\'\"-][^[:space:]\'\"]*) ]]; then
     # -m TOKEN (space + bare token, not starting with - to avoid flags).
-    MSG="${BASH_REMATCH[1]}"
+    MSG="${BASH_REMATCH[2]}"
   fi
 fi
 
