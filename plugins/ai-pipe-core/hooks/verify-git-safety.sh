@@ -60,10 +60,14 @@ if [[ "$CMD" =~ git[[:space:]]+clean[[:space:]]+(.*[[:space:]])?-[a-zA-Z]*f ]]; 
 fi
 
 # git checkout . / git restore . (discards working tree changes).
-# Require `.` to be a standalone argument — without the end anchor
-# `([[:space:]]|$)`, the pattern matches `.env`, `.gitignore`,
-# `.github/workflows/x.yml`, falsely blocking legitimate dotfile restores.
-if [[ "$CMD" =~ git[[:space:]]+(checkout|restore)[[:space:]]+(--[[:space:]]+)?\.([[:space:]]|$) ]]; then
+# Require `.` to be a STANDALONE argument. The end-of-token character class
+# includes whitespace AND every shell separator (`;`, `|`, `&`, `<`, `>`, `)`)
+# so chained commands like `git restore .;rm -rf .` don't slip through.
+# Without the separator chars, R5's end-anchor would only stop at whitespace
+# and let the destructive call ride a chain.
+# Dotfile paths like `.env`, `.gitignore`, `.github/workflows/x.yml` still pass
+# because the next char is alphanumeric, not in this set.
+if [[ "$CMD" =~ git[[:space:]]+(checkout|restore)[[:space:]]+(--[[:space:]]+)?\.([[:space:];\|\&\<\>\)]|$) ]]; then
   block "git ${BASH_REMATCH[1]} . discards working tree" "use specific paths instead of '.'"
 fi
 

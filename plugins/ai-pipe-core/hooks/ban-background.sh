@@ -35,14 +35,27 @@ DISALLOWED_PATTERNS=(
   '(^|[[:space:]])(make|gradle|mvn)([[:space:]]+(test|build|check|verify|install))'
   '(^|[[:space:]]|\./)(gradlew|mvnw)([[:space:]]+(test|build|check|verify|install))'
   '(^|[[:space:]])bazel[[:space:]]+(test|build)'
+  # Bundlers / build tools (their watcher / dev-server modes are allowed above
+  # via WATCHER_FLAGS / WATCHER_TOOLS; reaching this list means non-watcher).
+  '(^|[[:space:]])(webpack|vite|esbuild|rollup|parcel|tsup)([[:space:]]|$)'
 )
 
-# Watcher / dev-server modes are legitimate backgrounding (the whole point is
-# long-running). If any of these flags appear in the command, skip the block
-# check — comment at top says watchers are allowed and we should keep that
-# promise.
-WATCHER_INDICATORS='(--watch|--watchAll|-w[[:space:]]|--ui|--serve|--dev|--hot)'
-if [[ "$CMD" =~ $WATCHER_INDICATORS ]]; then
+# Watcher / dev-server modes are legitimate backgrounding (long-running by
+# design). Two-part detection:
+#
+# 1. WATCHER_FLAGS — explicit flag forms with a trailing word boundary so
+#    `--watch=false`, `--devtool=source-map`, `--hotfix-only`, `--servers=2`
+#    don't false-allow. `--dev` / `--hot` standalone are NOT included because
+#    `npm install --dev`, `pip install --dev` etc. are not watchers.
+# 2. WATCHER_TOOLS — explicit dev-server / watcher CLIs. `vite` and `webpack`
+#    have non-watcher subcommands (`vite build`), so we require the watcher
+#    subcommand to be present.
+#
+# `-w` alone is too overloaded (`grep -w`, `xargs -w`, ...) to use as a watcher
+# signal; agents should write the long form when they want background.
+WATCHER_FLAGS='(--watch|--watchAll)([[:space:]]|$)'
+WATCHER_TOOLS='(^|[[:space:]])(nodemon|webpack-dev-server|webpack[[:space:]]+serve|vite[[:space:]]+(dev|serve)|next[[:space:]]+dev|astro[[:space:]]+dev|remix[[:space:]]+dev|tsx[[:space:]]+watch)([[:space:]]|$)'
+if [[ "$CMD" =~ $WATCHER_FLAGS ]] || [[ "$CMD" =~ $WATCHER_TOOLS ]]; then
   exit 0
 fi
 
