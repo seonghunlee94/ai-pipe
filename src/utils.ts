@@ -54,8 +54,20 @@ export interface PackageInfo {
 export function readPackageInfo(): PackageInfo {
   const pkgPath = join(packageRoot(), "package.json");
   const raw = readFileSync(pkgPath, "utf8");
-  const json = JSON.parse(raw) as PackageInfo;
-  return { name: json.name, version: json.version };
+  const json: unknown = JSON.parse(raw);
+  if (
+    typeof json !== "object" ||
+    json === null ||
+    typeof (json as { name?: unknown }).name !== "string" ||
+    typeof (json as { version?: unknown }).version !== "string"
+  ) {
+    throw new AiPipeError(
+      "E_VERSION_PARSE",
+      `package.json at ${pkgPath} is missing string "name"/"version" fields.`,
+    );
+  }
+  const obj = json as { name: string; version: string };
+  return { name: obj.name, version: obj.version };
 }
 
 export function resolveTargetDir(arg: string | undefined): string {

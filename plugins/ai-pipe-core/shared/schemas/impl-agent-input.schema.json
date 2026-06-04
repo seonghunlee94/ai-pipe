@@ -1,8 +1,8 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "$id": "impl-agent-input.schema.json",
+  "$id": "https://github.com/your-org/ai-pipe/schemas/impl-agent-input.schema.json",
   "title": "Implementation Agent Input",
-  "description": "Spec §11.1 — input contract for backend-eng, frontend-eng, infra-eng.",
+  "description": "Spec §11.1 — input contract for backend-eng, frontend-eng, infra-eng. additionalProperties:false catches typos like task_idd; declare new optional inputs in properties.",
   "type": "object",
   "required": [
     "task_id",
@@ -31,5 +31,6 @@
       "type": "object",
       "description": "Spec §4.3 — 이전 task의 downstream_notes를 명시적으로 전달받는 필드 (선택)."
     }
-  }
+  },
+  "additionalProperties": false
 }

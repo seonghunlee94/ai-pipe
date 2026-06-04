@@ -15,19 +15,33 @@ export type VersionStatus =
 export function checkVersionSync(cliVersion: string, projectVersion: string | null): VersionStatus {
   if (!projectVersion) return "not-installed";
   if (cliVersion === projectVersion) return "in-sync";
-  const [cliMajor, cliMinor] = parseSemver(cliVersion);
-  const [projMajor, projMinor] = parseSemver(projectVersion);
-  if (cliMajor !== projMajor) return "major-mismatch";
-  if (cliMinor - projMinor >= 2) return "minor-lag";
+  const cli = parseSemver(cliVersion);
+  const proj = parseSemver(projectVersion);
+  if (cli.major !== proj.major) return "major-mismatch";
+  if (cli.minor - proj.minor >= 2) return "minor-lag";
   return "out-of-sync";
 }
 
-function parseSemver(v: string): [number, number, number] {
-  const parts = v.trim().split(".").map((n) => Number.parseInt(n, 10));
-  if (parts.length < 3 || parts.some(Number.isNaN)) {
+interface Semver {
+  major: number;
+  minor: number;
+  patch: number;
+}
+
+function parseSemver(v: string): Semver {
+  const parts = v.trim().split(".");
+  if (parts.length < 3) {
     throw new AiPipeError("E_VERSION_PARSE", `Unparseable version: "${v}"`);
   }
-  return [parts[0], parts[1], parts[2]];
+  const major = Number.parseInt(parts[0] ?? "", 10);
+  const minor = Number.parseInt(parts[1] ?? "", 10);
+  // Strip prerelease tag from patch ("1-rc.1" → "1") before parsing.
+  const patchRaw = (parts[2] ?? "").split("-")[0] ?? "";
+  const patch = Number.parseInt(patchRaw, 10);
+  if (Number.isNaN(major) || Number.isNaN(minor) || Number.isNaN(patch)) {
+    throw new AiPipeError("E_VERSION_PARSE", `Unparseable version: "${v}"`);
+  }
+  return { major, minor, patch };
 }
 
 export async function runVersion(args: string[]): Promise<void> {

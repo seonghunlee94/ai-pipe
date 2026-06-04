@@ -1,6 +1,6 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "$id": "impl-agent-output.schema.json",
+  "$id": "https://github.com/your-org/ai-pipe/schemas/impl-agent-output.schema.json",
   "title": "Implementation Agent Output",
   "description": "Spec §11.1 — output contract for backend-eng, frontend-eng, infra-eng. additionalProperties intentionally permitted; downstream tools tolerate extras.",
   "type": "object",

@@ -1,40 +1,31 @@
 import {
   appendFileSync,
-  chmodSync,
   cpSync,
   existsSync,
   mkdirSync,
   readFileSync,
-  readdirSync,
-  statSync,
   writeFileSync,
 } from "node:fs";
 import { join, relative } from "node:path";
 
 import { AiPipeError } from "./errors.js";
+import {
+  GITIGNORE_LINES,
+  GITIGNORE_MARKER,
+  LOCAL_DIRS,
+  LOCAL_FILES,
+} from "./local-files.js";
 import { hasFlag, readPackageInfo, resolveTargetDir, templateDir } from "./utils.js";
 
 // `ai-pipe init [targetDir] [--force]`
 //
-// Bootstraps a project to use ai-pipe. Drops user-editable templates into
-// <targetDir>/.claude/ (project-settings.md, pipeline.json, .gitignore patch).
-// The actual agents/hooks/commands come from the plugin marketplace — install
-// with `/plugin marketplace add github:your-org/ai-pipe` then
-// `/plugin install ai-pipe-core@ai-pipe` inside Claude Code.
+// Drops user-editable files into <targetDir>/.claude/ (project-settings.md,
+// pipeline.json, settings.local.json.example) and patches .gitignore. The
+// agents/hooks/commands/scripts come from the ai-pipe-core plugin — see
+// README for the `/plugin marketplace add` flow.
 //
-// --force: overwrite existing .claude/ EXCEPT files on the LOCAL_FILES list
-//          (spec §8.3) — user customizations are preserved.
-
-// Spec §8.3 protected files — never overwritten by init or update.
-const LOCAL_FILES = [
-  "rules/project-settings.md",
-  "shared/github-project-ids.md",
-  "settings.local.json",
-  ".current-agent",
-  "config/pipeline.local.json",
-];
-
-const LOCAL_DIRS = ["worktrees", "config/stack", "config/conventions"];
+// --force: overwrite the existing tree EXCEPT files on LOCAL_FILES (spec
+// §8.3); user customizations are preserved.
 
 export async function runInit(args: string[]): Promise<void> {
   const force = hasFlag(args, "--force");
@@ -58,16 +49,11 @@ export async function runInit(args: string[]): Promise<void> {
     throw new AiPipeError("E_TEMPLATE_MISSING", `Template not found at ${src}.`);
   }
 
-  // cpSync with a filter so LOCAL_FILES that already exist locally aren't
-  // touched, even under --force.
   cpSync(src, targetClaude, {
     recursive: true,
     force: true,
     filter: (srcPath) => !isLocallyOwned(srcPath, src, targetClaude),
   });
-
-  // Make all .sh files and bin/* executable (chmod may be lost via npm tarball).
-  ensureExecutable(targetClaude);
 
   const pkg = readPackageInfo();
   writeFileSync(join(targetClaude, ".dev-pipe-version"), `${pkg.version}\n`, "utf8");
@@ -81,8 +67,8 @@ function isLocallyOwned(srcPath: string, srcRoot: string, targetRoot: string): b
   const rel = relative(srcRoot, srcPath);
   if (!rel) return false;
   const targetPath = join(targetRoot, rel);
-  // Only preserve if the file/dir actually exists locally; otherwise copy
-  // the template default so a fresh init still bootstraps a working state.
+  // Only preserve if it actually exists locally; otherwise copy the template
+  // default so a fresh install still bootstraps a working state.
   if (!existsSync(targetPath)) return false;
 
   if (LOCAL_FILES.includes(rel)) return true;
@@ -92,50 +78,13 @@ function isLocallyOwned(srcPath: string, srcRoot: string, targetRoot: string): b
   return false;
 }
 
-function ensureExecutable(claudeDir: string): void {
-  walkFiles(claudeDir, (p, name) => {
-    if (name.endsWith(".sh")) chmodSync(p, 0o755);
-  });
-  const binDir = join(claudeDir, "bin");
-  if (existsSync(binDir)) {
-    for (const entry of readdirSync(binDir)) {
-      const p = join(binDir, entry);
-      if (statSync(p).isFile()) chmodSync(p, 0o755);
-    }
-  }
-}
-
-function walkFiles(dir: string, fn: (path: string, name: string) => void): void {
-  if (!existsSync(dir)) return;
-  for (const entry of readdirSync(dir)) {
-    const p = join(dir, entry);
-    const s = statSync(p);
-    if (s.isDirectory()) {
-      walkFiles(p, fn);
-    } else if (s.isFile()) {
-      fn(p, entry);
-    }
-  }
-}
-
 function patchGitignore(target: string): void {
   const gitignore = join(target, ".gitignore");
-  const marker = "# Added by ai-pipe init";
-  const block = [
-    "",
-    marker,
-    ".artifacts/",
-    ".claude/worktrees/",
-    ".claude/.current-agent",
-    ".claude/settings.local.json",
-    ".claude/config/pipeline.local.json",
-    ".claude/config/stack/*.json",
-    "",
-  ].join("\n");
+  const block = ["", GITIGNORE_MARKER, ...GITIGNORE_LINES, ""].join("\n");
 
   if (existsSync(gitignore)) {
     const current = readFileSync(gitignore, "utf8");
-    if (current.includes(marker)) return; // already patched
+    if (current.includes(GITIGNORE_MARKER)) return;
     appendFileSync(gitignore, block);
   } else {
     writeFileSync(gitignore, block.trimStart(), "utf8");

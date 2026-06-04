@@ -9,6 +9,12 @@
 //
 // Used both as a CLI command and as a library function called from init.ts.
 
+import { AiPipeError } from "./errors.js";
+
 export async function runValidate(_args: string[]): Promise<void> {
-  throw new Error("validate is a stub — see TODO in src/validate.ts and spec §11");
+  throw new AiPipeError(
+    "E_NOT_IMPLEMENTED",
+    "validate is a stub — see TODO in src/validate.ts and spec §11.",
+    2,
+  );
 }

@@ -60,5 +60,5 @@ tools:
 - `downstream_notes` 를 null 로 두지 말 것 (spec §4.3, 최소 빈 object `{}`)
 
 <!-- SHARED_REF: common-agent-rules -->
-SSOT: .claude/shared/agent-rules/index.md (작성 예정)
+SSOT: ${CLAUDE_PLUGIN_DIR}/shared/agent-rules/index.md
 <!-- /SHARED_REF -->

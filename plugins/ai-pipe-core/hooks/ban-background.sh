@@ -15,8 +15,8 @@ if ! command -v jq >/dev/null 2>&1; then
 fi
 
 INPUT=$(cat)
-BG=$(echo "$INPUT" | jq -r '.tool_input.run_in_background // false')
-CMD=$(echo "$INPUT" | jq -r '.tool_input.command // empty')
+BG=$(jq -r '.tool_input.run_in_background // false' <<<"$INPUT")
+CMD=$(jq -r '.tool_input.command // empty' <<<"$INPUT")
 
 # Not backgrounded → no concern.
 [[ "$BG" == "true" ]] || exit 0
@@ -33,6 +33,7 @@ DISALLOWED_PATTERNS=(
   '(^|[[:space:]])(pytest|ruff|mypy)([[:space:]]|$)'
   '(^|[[:space:]])(go[[:space:]]+test|cargo[[:space:]]+(test|build|check))'
   '(^|[[:space:]])(make|gradle|mvn)([[:space:]]+(test|build|check|verify|install))'
+  '(^|[[:space:]]|\./)(gradlew|mvnw)([[:space:]]+(test|build|check|verify|install))'
   '(^|[[:space:]])bazel[[:space:]]+(test|build)'
 )
 

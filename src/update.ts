@@ -17,6 +17,12 @@
 //   'config/pipeline.local.json',
 // ];
 
+import { AiPipeError } from "./errors.js";
+
 export async function runUpdate(_args: string[]): Promise<void> {
-  throw new Error("update is a stub — see TODO in src/update.ts and spec §9.3");
+  throw new AiPipeError(
+    "E_NOT_IMPLEMENTED",
+    "update is a stub — see TODO in src/update.ts and spec §9.3.",
+    2,
+  );
 }

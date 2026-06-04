@@ -6,6 +6,12 @@
 //   pipeline set <key> <value>  — write to pipeline.local.json (not base)
 //   pipeline show               — merged view of base + local
 
+import { AiPipeError } from "../errors.js";
+
 export async function runPipeline(_args: string[]): Promise<void> {
-  throw new Error("pipeline is a stub — see TODO in src/pipeline/commands.ts and spec §8.1");
+  throw new AiPipeError(
+    "E_NOT_IMPLEMENTED",
+    "pipeline is a stub — see TODO in src/pipeline/commands.ts and spec §8.1.",
+    2,
+  );
 }

@@ -14,10 +14,12 @@ if ! command -v jq >/dev/null 2>&1; then
 fi
 
 INPUT=$(cat)
-CMD=$(echo "$INPUT" | jq -r '.tool_input.command // empty')
+CMD=$(jq -r '.tool_input.command // empty' <<<"$INPUT")
 
-# Not a git command → pass through.
-[[ "$CMD" =~ (^|;|&&|\|\|)[[:space:]]*git[[:space:]] ]] || exit 0
+# Not a git command → pass through. Matches `git ...` at command start, after
+# a separator (; && || |), after whitespace, or via an absolute path
+# (e.g. /usr/bin/git, /opt/homebrew/bin/git).
+[[ "$CMD" =~ (^|[[:space:]]|;|&&|\|\|?|/)git[[:space:]] ]] || exit 0
 
 block() {
   echo "BLOCKED: $1" >&2

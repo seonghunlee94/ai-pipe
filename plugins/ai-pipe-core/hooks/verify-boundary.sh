@@ -13,8 +13,8 @@ if ! command -v jq >/dev/null 2>&1; then
 fi
 
 INPUT=$(cat)
-FILE_PATH=$(echo "$INPUT" | jq -r '.tool_input.file_path // empty')
-AGENT_TYPE=$(echo "$INPUT" | jq -r '.agent_type // empty')
+FILE_PATH=$(jq -r '.tool_input.file_path // empty' <<<"$INPUT")
+AGENT_TYPE=$(jq -r '.agent_type // empty' <<<"$INPUT")
 
 # Empty agent_type = main Claude Code session, not a subagent.
 # The user is editing directly, so we trust the action.

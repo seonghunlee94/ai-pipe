@@ -23,7 +23,7 @@ if ! command -v jq >/dev/null 2>&1; then
 fi
 
 INPUT=$(cat)
-REQUESTED=$(echo "$INPUT" | jq -r '.tool_input.subagent_type // empty')
+REQUESTED=$(jq -r '.tool_input.subagent_type // empty' <<<"$INPUT")
 
 # Agent tool can be called without subagent_type (defaults to general-purpose).
 [[ -n "$REQUESTED" ]] || exit 0
@@ -42,10 +42,19 @@ for BI in "${BUILTIN[@]}"; do
   [[ "$REQUESTED" == "$BI" ]] && exit 0
 done
 
-# Resolve project root.
+# Resolve MAIN project root. Inside a git worktree, --show-toplevel returns
+# the worktree dir (which doesn't have .claude/agents), so we use
+# --git-common-dir to find the main .git, then its parent is the main repo.
 PROJECT_ROOT="${CLAUDE_PROJECT_DIR:-}"
 if [[ -z "$PROJECT_ROOT" ]]; then
-  PROJECT_ROOT=$(git rev-parse --show-toplevel 2>/dev/null || pwd)
+  COMMON_DIR=$(git rev-parse --git-common-dir 2>/dev/null || true)
+  if [[ -n "$COMMON_DIR" ]]; then
+    # --git-common-dir may be relative; resolve against cwd.
+    [[ "$COMMON_DIR" = /* ]] || COMMON_DIR="$PWD/$COMMON_DIR"
+    PROJECT_ROOT=$(cd "$(dirname "$COMMON_DIR")" && pwd)
+  else
+    PROJECT_ROOT="$PWD"
+  fi
 fi
 
 # Gather allowed agents from both the project's .claude/agents/ and the
@@ -66,7 +75,7 @@ if [[ -z "$ALLOWED" ]]; then
   exit 0
 fi
 
-if ! printf '%s\n' "$ALLOWED" | grep -qx "$REQUESTED"; then
+if ! printf '%s\n' "$ALLOWED" | grep -Fxq -- "$REQUESTED"; then
   cat >&2 <<MSGEOF
 BLOCKED: subagent_type '$REQUESTED' is not registered.
   available project agents:

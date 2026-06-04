@@ -4,6 +4,12 @@
 // columns/statuses. Writes the result to .claude/shared/github-project-ids.md
 // which is a LOCAL_FILES protected path (spec §8.3).
 
+import { AiPipeError } from "./errors.js";
+
 export async function runDetect(_args: string[]): Promise<void> {
-  throw new Error("detect is a stub — see TODO in src/detect.ts and spec §3.2");
+  throw new AiPipeError(
+    "E_NOT_IMPLEMENTED",
+    "detect is a stub — see TODO in src/detect.ts and spec §3.2.",
+    2,
+  );
 }

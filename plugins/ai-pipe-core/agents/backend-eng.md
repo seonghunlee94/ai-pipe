@@ -63,5 +63,5 @@ tools:
 - 명세에 없는 기능 추가 금지 (스코프 외 작업은 별도 task 로 회부)
 
 <!-- SHARED_REF: boundary-enforcement -->
-SSOT: .claude/shared/agent-rules/boundary-enforcement.md (작성 예정)
+SSOT: ${CLAUDE_PLUGIN_DIR}/shared/agent-rules/boundary-enforcement.md
 <!-- /SHARED_REF -->

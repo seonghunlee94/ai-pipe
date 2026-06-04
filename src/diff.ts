@@ -8,6 +8,12 @@
 //
 // Reuse fileHash() from utils.ts.
 
+import { AiPipeError } from "./errors.js";
+
 export async function runDiff(_args: string[]): Promise<void> {
-  throw new Error("diff is a stub — see TODO in src/diff.ts and spec §9.3");
+  throw new AiPipeError(
+    "E_NOT_IMPLEMENTED",
+    "diff is a stub — see TODO in src/diff.ts and spec §9.3.",
+    2,
+  );
 }

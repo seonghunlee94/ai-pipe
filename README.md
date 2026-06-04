@@ -10,9 +10,18 @@ Claude Code 기반 멀티 에이전트 자동화 파이프라인. **Claude Code 
 
 루트 곳곳에 `@your-org` / `your-org`(GitHub org/user)이 들어가 있다.
 
+macOS (BSD sed):
+
 ```bash
 grep -rl 'your-org' . --include='*.json' --include='*.md' --include='*.yml' --include='.npmrc' \
   | xargs sed -i '' 's/your-org/YOUR_REAL_ORG/g'
+```
+
+Linux / WSL (GNU sed):
+
+```bash
+grep -rl 'your-org' . --include='*.json' --include='*.md' --include='*.yml' --include='.npmrc' \
+  | xargs sed -i 's/your-org/YOUR_REAL_ORG/g'
 ```
 
 대상 파일: `package.json`, `.npmrc`, `README.md`, `.github/workflows/publish.yml`, `.claude-plugin/marketplace.json`, `plugins/ai-pipe-core/plugin.json`.
@@ -156,6 +165,19 @@ Windows는 현재 미지원 (Bash 훅 의존). WSL 사용 권장.
 
 ---
 
-## 6. 라이선스
+## 6. 알려진 미확정 (Plugin Marketplace 실증 필요)
+
+PR1은 Claude Code Plugin Marketplace 공식 스키마를 직접 검증하지 못한 채 작성됐다. 다음 항목은 실제 `/plugin marketplace add github:your-org/ai-pipe` + `/plugin install ai-pipe-core@ai-pipe` 시점에 검증/조정 예정:
+
+- `plugins/ai-pipe-core/plugin.json`의 필드명 (`components`, `settings`, `requirements`, ...) — 공식 manifest 스키마와 일치 보장 불가
+- `.claude-plugin/marketplace.json`의 `source: "./plugins/ai-pipe-core"` — marketplace 위치 기준인지 repo root 기준인지 미확정
+- `plugins/ai-pipe-core/settings.json` 내부의 `${CLAUDE_PLUGIN_DIR}` substitution 범위 — hook command 외 필드에서도 동작하는지 미확정
+- `settings.json` 내 PreToolUse matcher `"Agent"` — 실제 Claude Code의 subagent tool 이름이 `Agent` / `Task` / `TaskCreate` 중 어느 것인지 한 번 캡처 후 확정 필요
+
+PR2 또는 별도 실증 라운드에서 위 4건을 정리한다.
+
+---
+
+## 7. 라이선스
 
 UNLICENSED (private). 공개 배포 시 `package.json`의 `license` 필드와 `LICENSE` 파일 추가 필요.
