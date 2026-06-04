@@ -58,5 +58,7 @@ tools:
 - `git commit`, `git push` 등 git 변경 작업 금지
 - 사용자가 제시하지 않은 요구사항을 임의로 추가 금지 (가정이 필요하면 spec 내 "Assumptions" 섹션에 명시)
 - `downstream_notes` 를 null 로 두지 말 것 (spec §4.3, 최소 빈 object `{}`)
+- 자신의 역할 경계 밖 작업은 즉시 거부하고 적절한 에이전트로 escalate
+- 임의 retry 금지 — 재시도 한도는 `config/pipeline.json` 의 `limits` 참조
 
-> 공통 규칙(identity, file boundaries, git discipline, ...)은 `common-agent-rules` skill이 `paths` frontmatter로 자동 활성화한다 — 이 파일에 다시 복제할 필요 없다.
+> 더 깊은 공통 규칙(escalation 카테고리, prompt caching 전략, output schema 등)은 `common-agent-rules` skill이 SSOT로 유지한다. 이 파일은 PM이 자율적으로 따라야 할 핵심 ban-list만 인라인한다.

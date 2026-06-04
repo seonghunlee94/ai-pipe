@@ -61,5 +61,8 @@ tools:
 - `.claude/rules/project-settings.md` 등 보호 파일 수정 금지 (project-ops 전담)
 - 테스트 삭제 금지 — 기존 테스트가 실패하면 코드를 고친다, 테스트를 지우지 않는다
 - 명세에 없는 기능 추가 금지 (스코프 외 작업은 별도 task 로 회부)
+- `validate-commit-msg.sh` 가 강제: Conventional Commits 형식 (`<type>(<scope>)?: <subject>`, 마침표 금지)
+- `ban-background.sh` 가 강제: 빌드/테스트/린트는 foreground 만, watcher / dev-server 만 백그라운드 허용
+- 임의 retry 금지 — 재시도 한도는 `config/pipeline.json` 의 `limits` 참조
 
-> 경계 강제 규칙(worktree isolation, protected files, git/commit discipline, background execution, subagent invocation, test policy)은 `boundary-enforcement` skill이 `paths: ["plugins/ai-pipe-core/agents/backend-eng.md", "src/**/*.ts", ...]` frontmatter로 자동 활성화한다.
+> 경계 강제 규칙 SSOT는 `boundary-enforcement` skill (paths: `src/**/*.{ts,tsx,js,jsx}`, `tests/**/*`). 코드/테스트 편집 시 자동 활성화되어 더 자세한 룰(에러 분류 카테고리, escalation 흐름, prompt caching 등)이 컨텍스트에 들어온다. 위 인라인 ban-list는 paths 매칭이 안 되는 컨텍스트(예: spec 단계)에서도 backend-eng가 따라야 할 최소 보호 집합이다.

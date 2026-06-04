@@ -3,10 +3,12 @@ name: common-agent-rules
 description: |
   Common rules every ai-pipe agent follows: identity, file boundaries, git
   discipline, tool usage, output contracts, test policy, cost/caching,
-  escalation. Auto-activates on any subagent invocation in this plugin so
-  individual agent files don't have to repeat the rules.
+  escalation. Auto-activates when an agent edits a spec or plan artifact.
+  Agent definition files (agents/*.md) embed the core ban-list inline; this
+  skill provides the full SSOT for deeper rules. Trigger keywords for model
+  invocation: "agent rules", "subagent contract", "downstream_notes",
+  "escalation".
 paths:
-  - "plugins/ai-pipe-core/agents/*.md"
   - ".artifacts/specs/*.md"
   - ".artifacts/plans/*.md"
 disable-model-invocation: false
@@ -61,7 +63,7 @@ user-invocable: false
 
 ## 7. Cost & Caching
 
-- 가능하면 SSOT 문서를 prompt 앞부분에 위치시켜 prompt cache hit rate를 최대화한다 (스펙 보완 — PR 2에서 자동화 예정).
+- 가능하면 SSOT 문서를 prompt 앞부분에 위치시켜 prompt cache hit rate를 최대화한다. (PR6에서 cache_control breakpoint 자동화 예정.)
 - 한 task의 컨텍스트가 비대해지면 task를 분할한다 (`CONTEXT_EXHAUSTED` — 스펙 §10.1).
 
 ## 8. Escalation

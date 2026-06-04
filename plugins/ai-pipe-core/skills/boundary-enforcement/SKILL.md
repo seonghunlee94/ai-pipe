@@ -3,16 +3,20 @@ name: boundary-enforcement
 description: |
   Worktree isolation, protected files, git discipline, commit format,
   background-execution rules, subagent invocation, test policy — the full
-  set of rules enforced by ai-pipe-core hooks. Auto-activates for impl
-  agents (backend/frontend/infra) and any task touching code.
+  set of rules enforced by ai-pipe-core hooks. Auto-activates when the
+  agent edits source code or tests. Impl agents (backend/frontend/infra)
+  embed the core ban-list inline in their definitions; this skill provides
+  the full SSOT. Trigger keywords for model invocation: "boundary",
+  "worktree", "protected file", "force push", "verify-boundary".
 paths:
-  - "plugins/ai-pipe-core/agents/backend-eng.md"
-  - "plugins/ai-pipe-core/agents/frontend-eng.md"
-  - "plugins/ai-pipe-core/agents/infra-eng.md"
   - "src/**/*.ts"
   - "src/**/*.tsx"
   - "src/**/*.js"
+  - "src/**/*.jsx"
   - "tests/**/*.ts"
+  - "tests/**/*.tsx"
+  - "tests/**/*.js"
+  - "tests/**/*.jsx"
 disable-model-invocation: false
 user-invocable: false
 ---
