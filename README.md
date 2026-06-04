@@ -1,118 +1,135 @@
 # ai-pipe
 
-Claude Code 기반 멀티 에이전트 자동화 파이프라인. 다양한 프로젝트에 `.claude/` 트리를 설치하고, 팀 단위로 공유 가능하도록 npm 패키지로 배포한다.
+Claude Code 기반 멀티 에이전트 자동화 파이프라인. **Claude Code Plugin Marketplace**로 배포하여 다양한 프로젝트·머신에서 공유 가능하고, 프로젝트별 설정과 GitHub Issues/Projects V2 연동을 지원한다.
 
-> **현재 상태: 스캐폴딩(scaffolding)** — 디렉토리 구조와 핵심 파일 골격만 갖춰진 상태다. `init`, `version` 명령만 실제로 동작한다. 자세한 설계 의도와 v1.0까지의 로드맵은 [`multi-agent-pipeline-best-practices.md`](./multi-agent-pipeline-best-practices.md) 참조.
+> **현재 상태: scaffolding + PR1**. 디렉토리 구조와 핵심 파일 골격 + 5개 PreToolUse 훅이 동작한다. 자세한 설계는 [`multi-agent-pipeline-best-practices.md`](./multi-agent-pipeline-best-practices.md), 2026년 베스트 프랙티스 분석은 PR1 커밋 메시지 참조.
 
 ---
 
 ## 0. 사용 전 교체해야 할 placeholder
 
-루트 곳곳에 `@your-org`(GitHub org/user)이 들어가 있다. 실제로 사용하기 전 일괄 치환한다.
+루트 곳곳에 `@your-org` / `your-org`(GitHub org/user)이 들어가 있다.
 
 ```bash
-grep -rl '@your-org' . --include='*.json' --include='*.md' --include='.npmrc' \
-  | xargs sed -i '' 's/@your-org/YOUR_REAL_ORG/g'
+grep -rl 'your-org' . --include='*.json' --include='*.md' --include='*.yml' --include='.npmrc' \
+  | xargs sed -i '' 's/your-org/YOUR_REAL_ORG/g'
 ```
 
-대상 파일: `package.json`, `.npmrc`, `README.md`, `.github/workflows/publish.yml`.
+대상 파일: `package.json`, `.npmrc`, `README.md`, `.github/workflows/publish.yml`, `.claude-plugin/marketplace.json`, `plugins/ai-pipe-core/plugin.json`.
 
 ---
 
-## 1. 설치
+## 1. 아키텍처
 
-### 1-1. GitHub PAT 설정 (한 번만)
+ai-pipe는 **두 채널**로 사용자 프로젝트에 도착한다:
 
-```bash
-# PAT 발급: GitHub → Settings → Developer settings → Tokens (classic)
-#  필요 권한: read:packages (설치), write:packages (배포 시)
-
-cat >> ~/.npmrc <<'EOF'
-@your-org:registry=https://npm.pkg.github.com
-//npm.pkg.github.com/:_authToken=ghp_xxxxxxxxxxxxxxxxxxxx
-EOF
+```
+┌────────────────────────────────────────────────────────┐
+│   Channel A: Claude Code Plugin Marketplace (주력)      │
+│   /plugin marketplace add github:your-org/ai-pipe      │
+│   /plugin install ai-pipe-core@ai-pipe                 │
+│   → 에이전트/훅/명령/스크립트를 plugin cache로 자동 배포  │
+└────────────────────────────────────────────────────────┘
+┌────────────────────────────────────────────────────────┐
+│   Channel B: npm CLI `ai-pipe init` (보조)              │
+│   사용자가 직접 편집할 파일만 프로젝트 .claude/에 떨어뜨림 │
+│   • rules/project-settings.md   (org/repo placeholder) │
+│   • config/pipeline.json        (재시도 한도)            │
+│   • settings.local.json.example                         │
+│   + .gitignore에 .artifacts/ 등 자동 추가                │
+└────────────────────────────────────────────────────────┘
 ```
 
-### 1-2. 글로벌 설치
+**왜 두 채널?**
+
+- Channel A(plugin)는 모든 에이전트·훅·스크립트를 가져오고, 자동 업데이트(`/plugin marketplace update`)·캐시·버전 핀고정이 plugin marketplace 인프라로 무료로 해결된다.
+- Channel B(npm CLI)는 사용자가 직접 손대야 할 4개 파일과 `.gitignore` 패치만 처리한다. plugin이 사용자 프로젝트 디렉토리 안에 파일을 떨어뜨리지 않기 때문에 필요.
+
+장기적으로 Channel B의 4개 파일도 plugin이 `/ai-pipe-init` 같은 slash command로 떨어뜨릴 수 있게 되면 Channel B는 제거된다 (로드맵 PR 5+).
+
+---
+
+## 2. 설치
+
+### 2-1. Plugin 설치 (필수 — Claude Code 내부에서)
+
+```
+/plugin marketplace add github:your-org/ai-pipe
+/plugin install ai-pipe-core@ai-pipe
+```
+
+이 시점에서 에이전트(pm, backend-eng, …), 훅(verify-boundary 외 4개), 명령(`/create-spec`)이 활성화된다.
+
+### 2-2. 프로젝트 부트스트랩 (선택 — 새 프로젝트마다 한 번)
 
 ```bash
+# npm CLI를 글로벌 설치
 npm install -g @your-org/ai-pipe
-ai-pipe --version
-```
 
----
-
-## 2. 사용
-
-### 2-1. 프로젝트에 파이프라인 설치
-
-```bash
+# 프로젝트 디렉토리에서
 cd my-project
 ai-pipe init .
 ```
 
-생성되는 것: `.claude/` 트리 전체 + `.dev-pipe-version`. 이후 `git status`로 확인하고 커밋한다. `.artifacts/`는 자동으로 `.gitignore`에 추가된다.
+생성되는 것: `.claude/{rules,config,settings.local.json.example,.dev-pipe-version}` + `.gitignore` 패치.
 
-### 2-2. 버전 확인
+### 2-3. 프로젝트별 설정 편집
 
 ```bash
-ai-pipe version
-# CLI: 0.0.1 / Project: 0.0.1 / Status: in-sync
+$EDITOR .claude/rules/project-settings.md   # org, repo, short, default assignee
+$EDITOR .claude/config/pipeline.json        # 재시도 한도, 브랜치 패턴 (필요 시)
+gh auth login                                # project-ops 에이전트가 gh 사용
 ```
-
-### 2-3. 프로젝트별 설정
-
-설치 직후 다음 파일을 편집한다:
-
-| 파일 | 용도 |
-|------|------|
-| `.claude/rules/project-settings.md` | org, repo, short, default assignee 등 (spec §8.2) |
-| `.claude/config/pipeline.json` | 재시도 한도, 브랜치 패턴 등 (spec §8.1) |
-| `.claude/config/pipeline.local.json` | 로컬 오버라이드 (git ignore, optional) |
-| `.claude/settings.local.json` | 로컬 권한 오버라이드 (`settings.local.json.example` 참고) |
 
 ---
 
 ## 3. 구현 현황
 
-`[working]` = 실제 동작, `[stub]` = 골격만 (TODO 주석 + spec 참조).
+### Plugin (`plugins/ai-pipe-core/`)
+
+| 영역 | 상태 | spec |
+|------|------|------|
+| `settings.json` (5개 훅 wired, `${CLAUDE_PLUGIN_DIR}` substitution) | working | §7.1 |
+| `hooks/verify-boundary.sh` (suffix-match, empty agent_type 통과, exit 2) | working | §7.2 |
+| `hooks/verify-git-safety.sh` (force-push/reset --hard/branch -D/clean -f/restore ./amend/--no-verify) | working | §7.3 |
+| `hooks/validate-commit-msg.sh` (Conventional Commits + HEREDOC 인식) | working | §7.3 |
+| `hooks/ban-background.sh` (npm/yarn/pnpm/tsc/vitest/jest/pytest/cargo/go/make/gradle/mvn/bazel) | working | §7.3 |
+| `hooks/validate-subagent-type.sh` (`CLAUDE_PROJECT_DIR` 우선, 워크트리 안전) | working | §7.3 |
+| `agents/pm.md`, `agents/backend-eng.md` | working | §6.1 |
+| `agents/{architect,frontend-eng,infra-eng,qa,test-*,reviewer,verifier,project-ops}.md` (10개) | stub | §4.1 |
+| `commands/create-spec.md` | working | §4.2 |
+| `commands/{design-plan,execute-plan}.md` | stub | §4.2 |
+| `shared/agent-rules/index.md` (SSOT) | working | §6.1 |
+| `shared/schemas/impl-agent-input.schema.json`, `impl-agent-output.schema.json` | working | §11.1 |
+| `scripts/gh/*.sh`, `scripts/validate/*.sh` | stub | §3.2, §10.2, §11.2 |
+| `workflows/execute-plan.js`, `bin/adp-watch` | stub | §4.2, §12.2 |
 
 ### CLI (`src/`)
 
-| 파일 | 상태 | spec |
-|------|------|------|
-| `cli.ts`, `init.ts`, `version.ts`, `utils.ts`, `errors.ts` | `[working]` | §2, §5.3, §9.1 |
-| `update.ts`, `upgrade.ts`, `diff.ts` | `[stub]` | §9.3, §9.4 |
-| `preflight.ts`, `detect.ts`, `validate.ts`, `versions.ts` | `[stub]` | §3.2, §13.3 |
-| `pipeline/commands.ts`, `stack/generate.js`, `conventions/migrate.ts` | `[stub]` | §8.1, v2.0 |
+| 명령 | 상태 |
+|------|------|
+| `init` (LOCAL_FILES 보호, `.gitignore` 자동 패치, plugin marketplace 안내) | working |
+| `version` (CLI vs project sync 상태) | working |
+| `update`, `upgrade`, `diff`, `preflight`, `detect`, `validate`, `versions`, `pipeline` | stub |
 
-### Template (`template/.claude/`)
+### 훅 검증
 
-| 파일 | 상태 | spec |
-|------|------|------|
-| `settings.json` (verify-boundary 훅 1개 wired) | `[working]` | §7.1 |
-| `config/pipeline.json` | `[working]` | §8.1 |
-| `rules/project-settings.md` (placeholder 값) | `[working]` | §8.2 |
-| `agents/pm.md`, `agents/backend-eng.md` | `[working]` | §6.1 |
-| `agents/*.md` (10개) | `[stub]` | §4.1 |
-| `commands/create-spec.md` | `[working]` | §4.2 |
-| `commands/design-plan.md`, `execute-plan.md` | `[stub]` | §4.2 |
-| `hooks/verify-boundary.sh` | `[working]` | §7.2 |
-| `hooks/*.sh` (4개) | `[stub]` | §7.3 |
-| `shared/schemas/impl-agent-input.schema.json` | `[working]` | §11.1 |
-| 그 외 `shared/`, `scripts/`, `workflows/`, `bin/`, `skills/` | `[stub]` | 다양함 |
+5개 훅 모두 `bash -n` 통과 + 정상/위반 케이스 동작 확인. exit code는 Claude Code 규약(2 = block) 준수.
 
 ---
 
-## 4. 스캐폴딩 이후 작업 순서 (권장)
+## 4. 로드맵
 
-1. **훅 4종 활성화** (spec §7.3) — `verify-git-safety.sh`, `validate-commit-msg.sh`, `ban-background.sh`, `validate-subagent-type.sh` 본문 채우고 `settings.json`에 wire.
-2. **에이전트 + SSOT 정착** (spec §6) — `architect.md` 풀 작성 + `shared/agent-rules/boundary-enforcement.md` 작성, SHARED_REF 패턴 검증.
-3. **`init` 대화형 프롬프트** — `project-settings.md` 의 placeholder 자동 치환.
-4. **`update` 명령** (spec §9.3) — 해시 기반 SCAN/CONFIRM/APPLY + `LOCAL_FILES` 보호.
-5. **End-to-end 시연** — pm → backend-eng 직렬 체인을 실제 Claude Code 세션에서 실행.
+| PR | 범위 |
+|----|------|
+| **PR1 (이 커밋)** | Plugin marketplace 구조 재편, 훅 P0/P1 버그 fix, exit code 1→2, dangling SHARED_REF 정리, README 재작성 |
+| PR2 | `shared/agent-rules/`, `commands/` → `skills/`로 마이그레이션 (`paths` frontmatter 자동 활성화), prompt cache breakpoint 전략 명시 |
+| PR3 | MCP github 서버 통합 → `scripts/gh/*.sh` 폐기, `project-ops` 재정의 |
+| PR4 | Native `isolation: worktree` frontmatter 활용 → `workflows/execute-plan.js` 폐기 |
+| PR5 | Hooks v2 확장 (SessionStart, Stop, PostToolUse, secrets-scan) |
+| PR6 | Observability: 토큰/비용 JSONL, eval harness 시드 |
 
-이후 DAG 병렬 실행(§4.2), worktree(§3.3), Concordance Gate(§11.2), JSONL 이벤트(§12)를 차례로 채워 v1.0 완성.
+근거: 2026년 6월 기준 Claude Code는 Skills/Subagents/Plugin Marketplace/native worktree isolation을 표준으로 제공한다. 스펙(2025 amf 기반)이 자체 구현하던 대부분이 네이티브로 대체된다. 자세한 분석은 PR1 커밋 메시지 / 본 리포 git log 참조.
 
 ---
 
@@ -121,15 +138,24 @@ ai-pipe version
 ```bash
 git clone https://github.com/your-org/ai-pipe.git
 cd ai-pipe
-npm install         # 외부 의존성 0 (spec §2 — 의존성 최소화 원칙)
+npm install         # TypeScript devDep 2개만 (런타임 의존성 0)
 npm run build       # tsc → dist/
-node dist/cli.js init /tmp/test-target
+node dist/cli.js init /tmp/test-target   # 부트스트랩 동작 확인
 ```
 
-배포는 git tag `v*` push로 GitHub Actions가 자동 실행한다 (`.github/workflows/publish.yml`, spec §13.2).
+배포: git tag `v*` push로 GitHub Actions가 `.github/workflows/publish.yml`을 실행 (npm CLI를 GitHub Packages에 publish). Plugin marketplace는 `main` 브랜치 그 자체가 카탈로그이므로 별도 publish 단계가 없다 — `/plugin marketplace update`가 `git pull` 효과를 낸다.
+
+### 시스템 요구사항
+
+- Node.js 20+
+- bash, git
+- `jq` — 모든 훅이 stdin JSON 파싱에 사용 (`brew install jq` / `apt install jq`)
+- `gh` — project-ops 에이전트가 GitHub 조작에 사용 (`gh auth login`)
+
+Windows는 현재 미지원 (Bash 훅 의존). WSL 사용 권장.
 
 ---
 
 ## 6. 라이선스
 
-UNLICENSED (private). 공개 배포 시 `package.json`의 `license` 필드를 수정한다.
+UNLICENSED (private). 공개 배포 시 `package.json`의 `license` 필드와 `LICENSE` 파일 추가 필요.

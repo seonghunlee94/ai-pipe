@@ -1,0 +1,58 @@
+# Common Agent Rules (SSOT)
+
+이 문서는 모든 ai-pipe 에이전트가 따라야 할 공통 규칙의 단일 진실 원천(SSOT)이다. 각 에이전트 파일은 `<!-- SHARED_REF: common-agent-rules -->` 블록으로 이 문서를 참조한다.
+
+> **참고:** PR 2에서 이 문서는 `paths` frontmatter가 있는 Skill로 마이그레이션될 예정이다. 그 시점부터 명시적 SHARED_REF 참조는 자동 활성화로 대체된다.
+
+---
+
+## 1. Identity & Scope
+
+- 자신이 어떤 에이전트인지를 응답 첫 문장에 명시하지 말 것 (불필요한 노이즈).
+- 자신의 역할 경계 밖 작업은 즉시 거부하고 적절한 에이전트로 escalate.
+- "오케스트레이터는 작업하지 않는다" 원칙: 다른 에이전트를 호출하는 역할이면 직접 코드/파일 수정 금지.
+
+## 2. File System Boundaries
+
+- 자신에게 할당된 worktree 또는 디렉토리 바깥은 접근 금지.
+- 보호 파일(`verify-boundary.sh`가 차단하는 경로) 수정 금지:
+  - `.claude/rules/project-settings.md`
+  - `.claude/shared/github-project-ids.md`
+  - `.claude/settings.json`
+  - `.claude/config/pipeline.json`
+- 위 파일들은 `project-ops` 에이전트만 수정 가능.
+
+## 3. Git Discipline
+
+- 새 커밋을 만들 것 (amend 금지).
+- Conventional Commits 형식 준수: `<type>(<scope>)?: <subject>` — `validate-commit-msg.sh`가 강제.
+- 위험 명령 금지: `reset --hard`, `push --force`, `branch -D`, `clean -f`, `restore .`, `--no-verify` — `verify-git-safety.sh`가 차단.
+- 사용자 명시 요청 없이 push 금지.
+
+## 4. Tool Usage
+
+- 백그라운드 실행은 dev server / watcher / tail에만 허용. 빌드·테스트·린트는 항상 foreground — `ban-background.sh`가 차단.
+- 다른 서브에이전트는 `.claude/agents/*.md` 또는 빌트인(`Explore`, `Plan`, `general-purpose` 등) 중에서만 호출 — `validate-subagent-type.sh`가 화이트리스트.
+
+## 5. Output Contracts
+
+- 입출력 JSON은 반드시 `.claude/shared/schemas/impl-agent-{input,output}.schema.json` (또는 역할별 스키마)를 따른다.
+- `downstream_notes`는 항상 object (빈 `{}`도 허용, `null` 금지) — spec §4.3.
+- `status` 값: `"success"`, `"failure"`, `"partial"` 중 하나.
+
+## 6. Test & Verification
+
+- 테스트 삭제 금지. 실패하는 테스트는 코드를 고친다 — 스펙 정신(§15 안티패턴).
+- 명세에 없는 기능 임의 추가 금지. 스코프 외 작업은 별도 task로 회부.
+- PR 생성 전 반드시 빌드 + 타입체크 + 린트 + 유닛 테스트가 통과한 상태여야 한다.
+
+## 7. Cost & Caching
+
+- 가능하면 SSOT 문서를 prompt 앞부분에 위치시켜 prompt cache hit rate를 최대화한다 (스펙 보완 — PR 2에서 자동화 예정).
+- 한 task의 컨텍스트가 비대해지면 task를 분할한다 (`CONTEXT_EXHAUSTED` — 스펙 §10.1).
+
+## 8. Escalation
+
+- 명세-구현 불일치(`DESIGN_GAP`)는 architect로 escalate.
+- 인프라 오류(`ENV_FAILURE` — git push 실패, GitHub API 에러)는 사람에게 escalate.
+- 임의 retry 금지. 재시도 한도는 `config/pipeline.json`의 `limits` 참조.

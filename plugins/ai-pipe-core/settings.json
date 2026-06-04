@@ -1,0 +1,42 @@
+{
+  "$comment": "ai-pipe-core plugin hook wiring. ${CLAUDE_PLUGIN_DIR} resolves to the plugin's cached location regardless of install path. Requires jq, gh, bash, git on PATH. PreToolUse hooks exit with code 2 to block (per Claude Code hook convention).",
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "${CLAUDE_PLUGIN_DIR}/hooks/verify-boundary.sh"
+          }
+        ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "${CLAUDE_PLUGIN_DIR}/hooks/verify-git-safety.sh"
+          },
+          {
+            "type": "command",
+            "command": "${CLAUDE_PLUGIN_DIR}/hooks/validate-commit-msg.sh"
+          },
+          {
+            "type": "command",
+            "command": "${CLAUDE_PLUGIN_DIR}/hooks/ban-background.sh"
+          }
+        ]
+      },
+      {
+        "matcher": "Agent",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "${CLAUDE_PLUGIN_DIR}/hooks/validate-subagent-type.sh"
+          }
+        ]
+      }
+    ]
+  }
+}

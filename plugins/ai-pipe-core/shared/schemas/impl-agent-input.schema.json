@@ -26,7 +26,10 @@
     "downstream_notes": {
       "type": "object",
       "description": "이전 task 로부터의 정보 (null 불가, 빈 object 는 허용)"
+    },
+    "downstream_notes_from_prev": {
+      "type": "object",
+      "description": "Spec §4.3 — 이전 task의 downstream_notes를 명시적으로 전달받는 필드 (선택)."
     }
-  },
-  "additionalProperties": false
+  }
 }

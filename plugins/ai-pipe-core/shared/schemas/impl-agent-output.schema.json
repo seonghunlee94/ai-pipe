@@ -1,0 +1,58 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "impl-agent-output.schema.json",
+  "title": "Implementation Agent Output",
+  "description": "Spec §11.1 — output contract for backend-eng, frontend-eng, infra-eng. additionalProperties intentionally permitted; downstream tools tolerate extras.",
+  "type": "object",
+  "required": ["status", "task_id"],
+  "properties": {
+    "status": {
+      "enum": ["success", "failure", "partial"]
+    },
+    "task_id": {
+      "type": "string",
+      "pattern": "^T-[0-9]+$"
+    },
+    "files_created": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "files_modified": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "tests_added": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "downstream_notes": {
+      "type": "object",
+      "description": "다음 task 에게 전달되는 정보 (null 불가, 빈 object 허용)."
+    },
+    "meta": {
+      "type": "object",
+      "properties": {
+        "arch_coverage": {
+          "type": "object",
+          "properties": {
+            "spec_tasks_covered": {
+              "type": "array",
+              "items": { "type": "string", "pattern": "^REQ-[0-9]+$" },
+              "description": "이번 task 가 커버한 REQ-N 목록. Concordance Gate (§11.2) 가 검사."
+            }
+          }
+        },
+        "endpoints": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "추가/수정된 HTTP 엔드포인트 (예: 'POST /api/users')."
+        },
+        "entities": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "추가/수정된 도메인 엔티티 (예: 'User', 'Session')."
+        }
+      }
+    }
+  }
+}

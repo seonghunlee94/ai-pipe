@@ -1,0 +1,15 @@
+{
+  "$comment": "Claude Code plugin marketplace catalog. Users register this marketplace with `/plugin marketplace add github:your-org/ai-pipe`, then install plugins via `/plugin install <name>@ai-pipe`.",
+  "name": "ai-pipe",
+  "version": "0.1.0",
+  "description": "ai-pipe — multi-agent automation pipeline plugins for Claude Code.",
+  "plugins": [
+    {
+      "name": "ai-pipe-core",
+      "description": "Core multi-agent pipeline: agents, hooks, commands, scripts. Includes PM, backend-eng, architect, QA, reviewer, verifier, project-ops roles plus 5 PreToolUse hooks.",
+      "source": "./plugins/ai-pipe-core",
+      "version": "0.0.2",
+      "keywords": ["multi-agent", "pipeline", "orchestration", "github-projects"]
+    }
+  ]
+}

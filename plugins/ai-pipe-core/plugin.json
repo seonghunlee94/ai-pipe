@@ -1,0 +1,19 @@
+{
+  "$comment": "Claude Code plugin manifest. Activates the agents/, hooks/, commands/, skills/ subtrees under this directory when the plugin is installed.",
+  "name": "ai-pipe-core",
+  "version": "0.0.2",
+  "description": "Multi-agent automation pipeline: PM/Architect/Backend/Frontend/Infra/QA/Test/Reviewer/Verifier/Project-Ops agents, with PreToolUse safety hooks and GitHub Issues/Projects V2 integration scripts.",
+  "license": "UNLICENSED",
+  "homepage": "https://github.com/your-org/ai-pipe",
+  "components": {
+    "agents": "./agents",
+    "commands": "./commands",
+    "hooks": "./hooks",
+    "skills": "./skills"
+  },
+  "settings": "./settings.json",
+  "requirements": {
+    "claudeCode": ">=2.1.0",
+    "tools": ["jq", "gh", "bash", "git"]
+  }
+}

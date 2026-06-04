@@ -11,7 +11,7 @@ set -euo pipefail
 
 if ! command -v jq >/dev/null 2>&1; then
   echo "BLOCKED: jq is required for ai-pipe hooks. Install with: brew install jq" >&2
-  exit 1
+  exit 2
 fi
 
 INPUT=$(cat)
@@ -32,6 +32,8 @@ DISALLOWED_PATTERNS=(
   '(^|[[:space:]])(vitest|jest|mocha)([[:space:]]+run)?'
   '(^|[[:space:]])(pytest|ruff|mypy)([[:space:]]|$)'
   '(^|[[:space:]])(go[[:space:]]+test|cargo[[:space:]]+(test|build|check))'
+  '(^|[[:space:]])(make|gradle|mvn)([[:space:]]+(test|build|check|verify|install))'
+  '(^|[[:space:]])bazel[[:space:]]+(test|build)'
 )
 
 for PAT in "${DISALLOWED_PATTERNS[@]}"; do
@@ -41,7 +43,7 @@ BLOCKED: \`$CMD\` should not run in background.
   reason: a backgrounded build/test/lint hides failures from the agent.
   fix:    run it in foreground (omit run_in_background, or set it to false).
 EOF
-    exit 1
+    exit 2
   fi
 done
 

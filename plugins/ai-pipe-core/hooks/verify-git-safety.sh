@@ -4,13 +4,13 @@
 # still ask the user to run them manually if truly needed.
 #
 # stdin: {"tool_input": {"command": "..."}, "agent_type": "..."}
-# stdout: BLOCKED message to stderr + exit 1, or exit 0.
+# Exit: 2 = block (Claude Code shows stderr to model), 0 = pass.
 
 set -euo pipefail
 
 if ! command -v jq >/dev/null 2>&1; then
   echo "BLOCKED: jq is required for ai-pipe hooks. Install with: brew install jq" >&2
-  exit 1
+  exit 2
 fi
 
 INPUT=$(cat)
@@ -24,7 +24,7 @@ block() {
   echo "  command: $CMD" >&2
   echo "  reason:  $2" >&2
   echo "  if intended, ask the user to run it manually." >&2
-  exit 1
+  exit 2
 }
 
 # Patterns are intentionally permissive — `-f` alone is ambiguous, so we only
@@ -52,7 +52,7 @@ fi
 
 # git checkout . / git restore . (discards working tree changes)
 if [[ "$CMD" =~ git[[:space:]]+(checkout|restore)[[:space:]]+(--[[:space:]]+)?\. ]]; then
-  block "git $BASH_REMATCH discards working tree" "use specific paths instead of '.'"
+  block "git ${BASH_REMATCH[1]} . discards working tree" "use specific paths instead of '.'"
 fi
 
 # --no-verify (bypasses pre-commit/pre-push hooks)
