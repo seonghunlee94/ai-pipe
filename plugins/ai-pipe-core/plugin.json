@@ -2,7 +2,7 @@
   "$comment": "Claude Code plugin manifest. Activates the agents/, hooks/, skills/ subtrees. Claude Code 2.1+ unified commands into skills, so previous `commands/` content lives under `skills/` now and slash commands come from `skills/<name>/SKILL.md` with `user-invocable: true`.",
   "name": "ai-pipe-core",
   "version": "0.0.3",
-  "description": "Multi-agent automation pipeline: PM/Architect/Backend/Frontend/Infra/QA/Test/Reviewer/Verifier/Project-Ops agents, with PreToolUse safety hooks and GitHub Issues/Projects V2 integration scripts.",
+  "description": "Multi-agent automation pipeline: PM/Architect/Backend/Frontend/Infra/QA/Test/Reviewer/Verifier/Project-Ops agents, with PreToolUse safety hooks and GitHub Issues/Projects V2 integration via the GitHub MCP server (gh CLI fallback).",
   "license": "UNLICENSED",
   "homepage": "https://github.com/your-org/ai-pipe",
   "components": {

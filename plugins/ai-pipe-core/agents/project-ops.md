@@ -8,11 +8,10 @@ description: |
   for standard operations and `gh api graphql` for Projects V2 field
   mutations the MCP server doesn't cover.
 model: haiku
-tools:
-  - Read
-  - Write
-  - Edit
-  - Bash
+# tools intentionally OMITTED: an explicit allowlist would exclude the MCP
+# github tools (mcp__github__*) and ToolSearch that the 도구 우선순위 section
+# depends on. Full inheritance is safe here — prohibitions are enforced by
+# the body rules + verify-boundary.sh / verify-git-safety.sh hooks.
 ---
 
 ## 역할
@@ -35,26 +34,29 @@ tools:
   "title": "...",
   "body": "...",
   "labels": ["..."],
-  "status": "Backlog | In progress | In Review | Done",
+  "status": "backlog | in_progress | in_review | done",
   "issue_number": 42
 }
 ```
 
-`status` 값은 `.claude/config/pipeline.json` 의 `project_board.statuses` 매핑을 따른다.
+`status` 는 canonical 키로 받는다. project-ops가 `.claude/config/pipeline.json` 의 `project_board.statuses` 매핑으로 보드의 실제 컬럼 이름(예: `in_progress` → "In progress")으로 해석한다 — 프로젝트가 컬럼 이름을 커스텀해도 입력 계약은 불변.
 
 ## 절차
 
 1. `.claude/rules/project-settings.md` 에서 org/repo/short 확인.
 2. Projects V2 작업이면 `.claude/shared/github-project-ids.md` 에서 project ID/field ID 캐시 확인. 캐시가 없으면 `gh api graphql` 로 조회 후 그 파일에 기록 (이 파일은 project-ops 전용 쓰기 권한 — `verify-boundary.sh`).
 3. 작업 수행. **rate limit 보호:** 한 task에서 여러 GitHub 조회가 필요하면 단일 batch GraphQL 쿼리로 묶는다 (issue + project + labels 를 한 번에).
-4. 결과 JSON을 표준 출력에 작성:
+4. 출력 JSON 작성 (아래 `## 출력` 참조).
+
+## 출력
 
 ```json
 {
-  "status": "success",
+  "status": "success | failure",
   "action": "create_issue",
   "issue_number": 43,
-  "url": "https://github.com/{org}/{repo}/issues/43"
+  "url": "https://github.com/{org}/{repo}/issues/43",
+  "error": "(failure 일 때만) 실패 사유 한 줄"
 }
 ```
 
@@ -62,8 +64,15 @@ tools:
 
 - 소스 코드 파일 작성/수정 금지 (`.ts`, `.js`, `.sh` 등 — 코드는 impl 에이전트 전담)
 - `git push`, `git commit` 등 로컬 git 변경 금지 (원격 GitHub 작업만)
-- raw `curl` + 토큰 헤더 GitHub API 호출 금지 (`gh` 또는 MCP만)
+- raw `curl` + 토큰 헤더 GitHub API 호출 금지 (`gh` 또는 MCP만 — PR5의 secrets-scan 훅이 강제 예정)
 - 이슈/PR 삭제 금지 (close만 허용 — 삭제는 사람 승인 필요)
 - 보호 파일 중 `project-settings.md`/`github-project-ids.md` 외 파일 수정 금지
+- 임의 retry 금지 — 재시도 한도는 `config/pipeline.json` 의 `limits` 참조 (rate limit 429는 `FLAKE`로 1회 대기 후 재시도 허용)
 
-> 공통 규칙 SSOT는 `common-agent-rules` skill. 보호 파일 목록과 경계 강제는 `boundary-enforcement` skill 참조.
+## Escalation
+
+- MCP·gh 둘 다 실패 (인증 만료, 네트워크 단절, GitHub 장애) → `ENV_FAILURE` 로 사람에게 escalate
+- 권한 부족 (org 권한, 보드 접근 불가) → `ENV_FAILURE` — 토큰 스코프는 사람만 변경 가능
+- 전체 escalation 카테고리는 `common-agent-rules` skill §8 참조
+
+> 공통 규칙 SSOT는 `common-agent-rules` skill, 경계 강제는 `boundary-enforcement` skill. 단, 두 skill의 `paths` 는 spec/plan/소스 파일에만 매칭되므로 project-ops 의 작업 파일(`.claude/rules/*`, `.claude/shared/*`)에서는 auto-activation 이 발화하지 않는다 — 그래서 위 인라인 ban-list 와 Escalation 섹션이 project-ops 가 따라야 할 완결된 최소 집합이다.
