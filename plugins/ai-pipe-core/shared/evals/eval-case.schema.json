@@ -1,0 +1,49 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://github.com/your-org/ai-pipe/schemas/eval-case.schema.json",
+  "$comment": "$id contains the `your-org` placeholder; replace before publishing via the sed recipe in README §0.",
+  "title": "Eval Case",
+  "description": "PR6 — a single prompt-regression eval case: fixed input + expected output metrics. Run by `ai-pipe eval` (runner is future work).",
+  "type": "object",
+  "required": ["name", "input", "metric"],
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "Stable case id (kebab-case)."
+    },
+    "agent": {
+      "type": "string",
+      "description": "Which agent this case exercises (e.g. pm, backend-eng)."
+    },
+    "input": {
+      "type": "string",
+      "description": "Verbatim user/task input fed to the agent."
+    },
+    "metric": {
+      "type": "object",
+      "description": "Expected output assertions. Keys are case-specific; the runner checks each that is present.",
+      "properties": {
+        "req_ids_min": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Minimum number of REQ-N requirement ids the output must contain."
+        },
+        "spec_path_exists": {
+          "type": "boolean",
+          "description": "Output's spec_path must point at a file that was created."
+        },
+        "downstream_notes_not_null": {
+          "type": "boolean",
+          "description": "downstream_notes must be a non-null object (spec §4.3)."
+        },
+        "status_in": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Output status must be one of these values."
+        }
+      },
+      "additionalProperties": true
+    }
+  },
+  "additionalProperties": false
+}

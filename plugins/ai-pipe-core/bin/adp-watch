@@ -1,14 +1,35 @@
 #!/usr/bin/env bash
-# TODO: spec §12.2 — real-time pipeline event viewer.
-# Tails .artifacts/runs/{slug}-events.jsonl and pretty-prints with jq.
-# See spec §12.2 for the full reference implementation.
+# adp-watch — spec §12.2 + PR6 observability
+# Real-time pipeline event viewer over .artifacts/runs/{slug}-events.jsonl.
+# Pretty-prints phase/task/retry/escalation events and keeps a running
+# token + cost total when events carry a `usage` object.
+#
+# Usage:
+#   adp-watch <slug>            # follow live (tail -f)
+#   adp-watch <slug> --replay   # print existing events once and exit (no follow)
+#   adp-watch --cost <slug>     # print only the cost/token summary and exit
 
-set -euo pipefail
+set -uo pipefail   # no -e: a malformed JSONL line must not kill the viewer
 
-SLUG="${1:-}"
+if ! command -v jq >/dev/null 2>&1; then
+  echo "adp-watch requires jq. Install with: brew install jq / apt install jq" >&2
+  exit 78   # EX_CONFIG
+fi
+
+MODE="follow"
+SLUG=""
+for arg in "$@"; do
+  case "$arg" in
+    --replay) MODE="replay" ;;
+    --cost)   MODE="cost" ;;
+    --*)      echo "Unknown flag: $arg" >&2; exit 64 ;;
+    *)        SLUG="$arg" ;;
+  esac
+done
+
 if [[ -z "$SLUG" ]]; then
-  echo "Usage: adp-watch <slug>" >&2
-  exit 64
+  echo "Usage: adp-watch <slug> [--replay|--cost]" >&2
+  exit 64   # EX_USAGE
 fi
 
 EVENTS_FILE=".artifacts/runs/${SLUG}-events.jsonl"
@@ -17,5 +38,77 @@ if [[ ! -f "$EVENTS_FILE" ]]; then
   exit 1
 fi
 
-echo "TODO: pretty-print events. For now, raw tail:" >&2
-tail -f "$EVENTS_FILE"
+# Per-model USD/1M-token rates (input, output). Cache reads bill at ~10% of
+# input; cache writes at ~125%. Keep this table in sync with current pricing.
+# Unknown models contribute 0 cost (tokens still counted).
+rate_for() {
+  case "$1" in
+    *opus*)   echo "15 75" ;;
+    *sonnet*) echo "3 15" ;;
+    *haiku*)  echo "0.8 4" ;;
+    *)        echo "0 0" ;;
+  esac
+}
+
+print_event() {
+  local line="$1"
+  # Validate JSON; skip silently if the line is partial (concurrent append).
+  jq -e . >/dev/null 2>&1 <<<"$line" || return 0
+  local ts type
+  ts=$(jq -r '.ts // "?"' <<<"$line")
+  type=$(jq -r '.type // "?"' <<<"$line")
+  case "$type" in
+    phase_start) printf '[%s] ▶ Phase %s started\n'  "$ts" "$(jq -r '.phase // "?"' <<<"$line")" ;;
+    phase_done)  printf '[%s] ✔ Phase %s done\n'      "$ts" "$(jq -r '.phase // "?"' <<<"$line")" ;;
+    task_start)  printf '[%s]   ▶ %s (%s)\n'          "$ts" "$(jq -r '.task_id // "?"' <<<"$line")" "$(jq -r '.agent // "?"' <<<"$line")" ;;
+    task_done)   printf '[%s]   ✔ %s %s\n'            "$ts" "$(jq -r '.task_id // "?"' <<<"$line")" "$(jq -r '.status // "?"' <<<"$line")" ;;
+    task_retry)  printf '[%s]   ⚠ %s retry #%s (%s)\n' "$ts" "$(jq -r '.task_id // "?"' <<<"$line")" "$(jq -r '.attempt // "?"' <<<"$line")" "$(jq -r '.category // "?"' <<<"$line")" ;;
+    escalation)  printf '[%s]   ✗ %s ESCALATED → %s\n' "$ts" "$(jq -r '.task_id // "?"' <<<"$line")" "$(jq -r '.to // "human"' <<<"$line")" ;;
+    session_stop) printf '[%s] ⏹ session stop (branch %s, %s dirty)\n' "$ts" "$(jq -r '.branch // "?"' <<<"$line")" "$(jq -r '.dirty_files // 0' <<<"$line")" ;;
+    *)           printf '[%s]   · %s\n' "$ts" "$type" ;;
+  esac
+}
+
+print_cost_summary() {
+  # Aggregate usage across all events. Each event may carry:
+  #   .usage.model, .usage.input_tokens, .usage.output_tokens,
+  #   .usage.cache_read_tokens, .usage.cache_creation_tokens
+  local total_cost="0" total_in=0 total_out=0
+  while IFS= read -r line; do
+    jq -e '.usage' >/dev/null 2>&1 <<<"$line" || continue
+    local model in out cr cw rin rout
+    model=$(jq -r '.usage.model // "unknown"' <<<"$line")
+    in=$(jq -r '.usage.input_tokens // 0' <<<"$line")
+    out=$(jq -r '.usage.output_tokens // 0' <<<"$line")
+    cr=$(jq -r '.usage.cache_read_tokens // 0' <<<"$line")
+    cw=$(jq -r '.usage.cache_creation_tokens // 0' <<<"$line")
+    read -r rin rout <<<"$(rate_for "$model")"
+    # cost = (in*rin + out*rout + cr*rin*0.1 + cw*rin*1.25) / 1e6
+    local c
+    c=$(awk -v i="$in" -v o="$out" -v cr="$cr" -v cw="$cw" -v ri="$rin" -v ro="$rout" \
+        'BEGIN{printf "%.6f", (i*ri + o*ro + cr*ri*0.1 + cw*ri*1.25)/1000000}')
+    total_cost=$(awk -v a="$total_cost" -v b="$c" 'BEGIN{printf "%.6f", a+b}')
+    total_in=$((total_in + in))
+    total_out=$((total_out + out))
+  done < "$EVENTS_FILE"
+  printf '── cost summary (%s) ──\n' "$SLUG"
+  printf '  input tokens:  %s\n' "$total_in"
+  printf '  output tokens: %s\n' "$total_out"
+  printf '  est. cost:     $%s USD\n' "$total_cost"
+}
+
+case "$MODE" in
+  cost)
+    print_cost_summary
+    ;;
+  replay)
+    while IFS= read -r line; do print_event "$line"; done < "$EVENTS_FILE"
+    echo "──"
+    print_cost_summary
+    ;;
+  follow)
+    # Print backlog, then follow. Cost summary is available via --cost.
+    while IFS= read -r line; do print_event "$line"; done < "$EVENTS_FILE"
+    tail -n0 -f "$EVENTS_FILE" | while IFS= read -r line; do print_event "$line"; done
+    ;;
+esac

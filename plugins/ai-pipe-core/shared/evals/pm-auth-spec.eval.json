@@ -1,0 +1,11 @@
+{
+  "name": "pm-auth-spec",
+  "agent": "pm",
+  "input": "사용자 인증 기능을 만들어줘 (이메일+비밀번호 로그인, JWT 토큰 발급)",
+  "metric": {
+    "req_ids_min": 3,
+    "spec_path_exists": true,
+    "downstream_notes_not_null": true,
+    "status_in": ["success"]
+  }
+}

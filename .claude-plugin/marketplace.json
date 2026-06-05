@@ -8,7 +8,7 @@
       "name": "ai-pipe-core",
       "description": "Core multi-agent pipeline: agents, hooks, skills, scripts. Includes PM, backend-eng, architect, QA, reviewer, verifier, project-ops roles plus 6 PreToolUse safety hooks and SessionStart/Stop lifecycle hooks. Slash commands and shared rules are skills now (Claude Code 2.1 unification).",
       "source": "./plugins/ai-pipe-core",
-      "version": "0.0.3",
+      "version": "0.0.4",
       "keywords": ["multi-agent", "pipeline", "orchestration", "github-projects"]
     }
   ]
