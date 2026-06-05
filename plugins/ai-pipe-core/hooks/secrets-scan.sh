@@ -59,21 +59,29 @@ if grep -qE -- '-----BEGIN [A-Z ]*PRIVATE KEY-----' <<<"$TEXT"; then block "priv
 # JWT (three base64url segments, header starts eyJ)
 if grep -qE 'eyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}' <<<"$TEXT"; then block "JWT"; fi
 
-# --- Bash-specific: curl/wget with auth headers carrying inline values ---
+# --- Bash-specific: auth headers / basic-auth carrying inline literal values ---
 if [[ "$TOOL" == "Bash" || -z "$TOOL" ]]; then
   CMD=$(jq -r '.tool_input.command // empty' <<<"$INPUT")
   if [[ -n "$CMD" ]]; then
-    # curl -H "Authorization: token/Bearer <literal>" — allow $VAR expansion forms.
-    # [^|;&] stops the curl-scope at any shell separator so a later command's
-    # flags aren't misattributed to curl.
-    if grep -qiE 'curl[^|;&]*-H[[:space:]]+["'"'"']?authorization:[[:space:]]*(token|bearer)[[:space:]]+[A-Za-z0-9_.-]{8,}' <<<"$CMD" \
-       && ! grep -qiE 'authorization:[[:space:]]*(token|bearer)[[:space:]]+\$' <<<"$CMD"; then
-      block "curl with literal Authorization header (use gh CLI or MCP instead)"
+    # A literal `Authorization: token|Bearer <value>` header is a leaked secret
+    # regardless of which tool carries it — match it directly (no curl-proximity
+    # requirement, so query-string `&` in the URL can't break the scan). Allow
+    # `$VAR`/`${VAR}` expansion forms, which keep the secret out of the command.
+    if grep -qiE 'authorization:[[:space:]]*(token|bearer)[[:space:]]+[A-Za-z0-9_.-]{8,}' <<<"$CMD" \
+       && ! grep -qiE 'authorization:[[:space:]]*(token|bearer)[[:space:]]+[$"'"'"']*\$' <<<"$CMD"; then
+      block "literal Authorization header (use gh CLI or MCP instead)"
     fi
-    # curl -u user:password literal
-    if grep -qE 'curl[^|;&]*[[:space:]]-u[[:space:]]+[^[:space:]$]+:[^[:space:]$]+' <<<"$CMD"; then
-      block "curl with inline basic-auth credentials"
-    fi
+    # `-u user:password` basic-auth. Split on real command separators
+    # (&& || ; |) — NOT single `&` — so a query-string `&` stays in the curl
+    # segment but a later command's `-u` (e.g. `... && psql -u a:b`) is judged
+    # in its own segment. Only flag a segment that actually invokes curl/wget.
+    SEGMENTS=$(printf '%s' "$CMD" | sed -E 's/(\&\&|\|\||;|\|)/\n/g')
+    while IFS= read -r SEG; do
+      [[ "$SEG" =~ (curl|wget) ]] || continue
+      if grep -qE '[[:space:]]-u[[:space:]]+[^[:space:]$]+:[^[:space:]$]+' <<<"$SEG"; then
+        block "curl/wget with inline basic-auth credentials"
+      fi
+    done <<<"$SEGMENTS"
   fi
 fi
 
