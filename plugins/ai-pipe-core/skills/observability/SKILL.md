@@ -55,12 +55,12 @@ user-invocable: false
 
 ## 4. Eval harness seed
 
-prompt 변경이 품질을 떨어뜨리지 않았는지 회귀 검사한다. 시드 위치: `.claude/shared/evals/`.
+prompt 변경이 품질을 떨어뜨리지 않았는지 회귀 검사한다. 시드 위치: `${CLAUDE_PLUGIN_DIR}/shared/evals/` (스키마 `eval-case.schema.json` + 케이스 `*.eval.json`).
 
 각 eval 케이스는 고정 입력 + 기대 메트릭:
 
 ```json
-{"name":"auth-spec","input":"사용자 인증 기능","metric":{
+{"name":"pm-auth-spec","input":"사용자 인증 기능","metric":{
   "req_ids_min":3, "spec_path_exists":true, "downstream_notes_not_null":true}}
 ```
 

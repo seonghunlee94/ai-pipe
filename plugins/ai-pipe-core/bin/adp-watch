@@ -35,66 +35,72 @@ fi
 EVENTS_FILE=".artifacts/runs/${SLUG}-events.jsonl"
 if [[ ! -f "$EVENTS_FILE" ]]; then
   echo "No events yet at $EVENTS_FILE" >&2
-  exit 1
+  exit 66   # EX_NOINPUT
 fi
 
-# Per-model USD/1M-token rates (input, output). Cache reads bill at ~10% of
-# input; cache writes at ~125%. Keep this table in sync with current pricing.
+# Per-model USD/1M-token rates handled inside awk (print_cost_summary).
+# ESTIMATES as of 2026-06 — verify at docs.anthropic.com/en/docs/about-claude/pricing
+# before relying on cost figures (README §6: cost accuracy is empirically unverified).
+#   Opus 4.x  $15 / $75     Sonnet 4.x  $3 / $15     Haiku 4.5  $1 / $5
+# Cache reads bill at ~10% of input; cache writes at ~125% (5-min TTL).
 # Unknown models contribute 0 cost (tokens still counted).
-rate_for() {
-  case "$1" in
-    *opus*)   echo "15 75" ;;
-    *sonnet*) echo "3 15" ;;
-    *haiku*)  echo "0.8 4" ;;
-    *)        echo "0 0" ;;
-  esac
-}
 
 print_event() {
   local line="$1"
-  # Validate JSON; skip silently if the line is partial (concurrent append).
-  jq -e . >/dev/null 2>&1 <<<"$line" || return 0
-  local ts type
-  ts=$(jq -r '.ts // "?"' <<<"$line")
-  type=$(jq -r '.type // "?"' <<<"$line")
+  # Extract every displayed field in ONE jq call (avoids ~6 forks/line on the
+  # live path). A partial/invalid line yields no output and is skipped.
+  local fields
+  fields=$(jq -r '[.ts // "?", .type // "?", (.phase // "?"|tostring),
+                   .task_id // "?", .agent // "?", .status // "?",
+                   (.attempt // "?"|tostring), .category // "?",
+                   .to // "human", .branch // "?",
+                   (.dirty_files // 0|tostring)] | @tsv' <<<"$line" 2>/dev/null) || return 0
+  local ts type phase task_id agent status attempt category to branch dirty
+  IFS=$'\t' read -r ts type phase task_id agent status attempt category to branch dirty <<<"$fields"
   case "$type" in
-    phase_start) printf '[%s] ▶ Phase %s started\n'  "$ts" "$(jq -r '.phase // "?"' <<<"$line")" ;;
-    phase_done)  printf '[%s] ✔ Phase %s done\n'      "$ts" "$(jq -r '.phase // "?"' <<<"$line")" ;;
-    task_start)  printf '[%s]   ▶ %s (%s)\n'          "$ts" "$(jq -r '.task_id // "?"' <<<"$line")" "$(jq -r '.agent // "?"' <<<"$line")" ;;
-    task_done)   printf '[%s]   ✔ %s %s\n'            "$ts" "$(jq -r '.task_id // "?"' <<<"$line")" "$(jq -r '.status // "?"' <<<"$line")" ;;
-    task_retry)  printf '[%s]   ⚠ %s retry #%s (%s)\n' "$ts" "$(jq -r '.task_id // "?"' <<<"$line")" "$(jq -r '.attempt // "?"' <<<"$line")" "$(jq -r '.category // "?"' <<<"$line")" ;;
-    escalation)  printf '[%s]   ✗ %s ESCALATED → %s\n' "$ts" "$(jq -r '.task_id // "?"' <<<"$line")" "$(jq -r '.to // "human"' <<<"$line")" ;;
-    session_stop) printf '[%s] ⏹ session stop (branch %s, %s dirty)\n' "$ts" "$(jq -r '.branch // "?"' <<<"$line")" "$(jq -r '.dirty_files // 0' <<<"$line")" ;;
-    *)           printf '[%s]   · %s\n' "$ts" "$type" ;;
+    phase_start)  printf '[%s] ▶ Phase %s started\n'   "$ts" "$phase" ;;
+    phase_done)   printf '[%s] ✔ Phase %s done\n'       "$ts" "$phase" ;;
+    task_start)   printf '[%s]   ▶ %s (%s)\n'           "$ts" "$task_id" "$agent" ;;
+    task_done)    printf '[%s]   ✔ %s %s\n'             "$ts" "$task_id" "$status" ;;
+    task_retry)   printf '[%s]   ⚠ %s retry #%s (%s)\n' "$ts" "$task_id" "$attempt" "$category" ;;
+    escalation)   printf '[%s]   ✗ %s ESCALATED → %s\n' "$ts" "$task_id" "$to" ;;
+    session_stop) printf '[%s] ⏹ session stop (branch %s, %s dirty)\n' "$ts" "$branch" "$dirty" ;;
+    *)            printf '[%s]   · %s\n' "$ts" "$type" ;;
   esac
 }
 
 print_cost_summary() {
-  # Aggregate usage across all events. Each event may carry:
-  #   .usage.model, .usage.input_tokens, .usage.output_tokens,
-  #   .usage.cache_read_tokens, .usage.cache_creation_tokens
-  local total_cost="0" total_in=0 total_out=0
-  while IFS= read -r line; do
-    jq -e '.usage' >/dev/null 2>&1 <<<"$line" || continue
-    local model in out cr cw rin rout
-    model=$(jq -r '.usage.model // "unknown"' <<<"$line")
-    in=$(jq -r '.usage.input_tokens // 0' <<<"$line")
-    out=$(jq -r '.usage.output_tokens // 0' <<<"$line")
-    cr=$(jq -r '.usage.cache_read_tokens // 0' <<<"$line")
-    cw=$(jq -r '.usage.cache_creation_tokens // 0' <<<"$line")
-    read -r rin rout <<<"$(rate_for "$model")"
-    # cost = (in*rin + out*rout + cr*rin*0.1 + cw*rin*1.25) / 1e6
-    local c
-    c=$(awk -v i="$in" -v o="$out" -v cr="$cr" -v cw="$cw" -v ri="$rin" -v ro="$rout" \
-        'BEGIN{printf "%.6f", (i*ri + o*ro + cr*ri*0.1 + cw*ri*1.25)/1000000}')
-    total_cost=$(awk -v a="$total_cost" -v b="$c" 'BEGIN{printf "%.6f", a+b}')
-    total_in=$((total_in + in))
-    total_out=$((total_out + out))
-  done < "$EVENTS_FILE"
-  printf '── cost summary (%s) ──\n' "$SLUG"
-  printf '  input tokens:  %s\n' "$total_in"
-  printf '  output tokens: %s\n' "$total_out"
-  printf '  est. cost:     $%s USD\n' "$total_cost"
+  # Aggregate usage across all events in a SINGLE awk pass. Each event may
+  # carry .usage.{model,input_tokens,output_tokens,cache_read_tokens,
+  # cache_creation_tokens}. jq emits one TSV row per usage-bearing event;
+  # awk does all arithmetic (token counts AND cost — float-safe, no bash
+  # integer overflow/abort) under LC_ALL=C so a comma-decimal locale can't
+  # corrupt totals. Rate table lives here as the single source of truth.
+  # `-R fromjson?` parses each line independently and DROPS malformed lines
+  # (a plain `jq -r . file` would abort the whole pass at the first bad line).
+  jq -rR 'fromjson? | select(.usage) | [.usage.model // "unknown",
+         (.usage.input_tokens // 0), (.usage.output_tokens // 0),
+         (.usage.cache_read_tokens // 0), (.usage.cache_creation_tokens // 0)]
+         | @tsv' "$EVENTS_FILE" 2>/dev/null \
+  | LC_ALL=C awk -F'\t' -v slug="$SLUG" '
+      function rate(m,   r) {
+        if (m ~ /opus/)        r="15 75";
+        else if (m ~ /sonnet/) r="3 15";
+        else if (m ~ /haiku/)  r="1 5";
+        else                   r="0 0";
+        return r;
+      }
+      {
+        split(rate($1), p, " "); ri=p[1]+0; ro=p[2]+0;
+        in_t += $2; out_t += $3;
+        cost += ($2*ri + $3*ro + $4*ri*0.1 + $5*ri*1.25) / 1000000;
+      }
+      END {
+        printf "── cost summary (%s) ──\n", slug;
+        printf "  input tokens:  %d\n", in_t;
+        printf "  output tokens: %d\n", out_t;
+        printf "  est. cost:     $%.6f USD\n", cost;
+      }'
 }
 
 case "$MODE" in
