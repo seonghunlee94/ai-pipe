@@ -21,4 +21,4 @@ TODO: PR3+. 백엔드 구현 관례 SSOT. 다음을 다룬다:
 - 트랜잭션 경계
 - 테스트 레이아웃 (unit/integration/e2e 분리)
 
-PR4의 `ai-pipe detect` 명령이 프로젝트 스택을 감지해 이 파일의 일부 섹션을 자동 생성한다 (스펙 §3-2).
+PR4의 `ai-pipe detect` 명령이 프로젝트 스택을 감지해 이 파일의 일부 섹션을 자동 생성한다 (스펙 §5.1 `config/stack/`, v2.0 스택 자동 감지).
