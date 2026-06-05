@@ -78,7 +78,7 @@ print_cost_summary() {
   # corrupt totals. Rate table lives here as the single source of truth.
   # `-R fromjson?` parses each line independently and DROPS malformed lines
   # (a plain `jq -r . file` would abort the whole pass at the first bad line).
-  jq -rR 'fromjson? | select(.usage) | [.usage.model // "unknown",
+  jq -rR 'fromjson? | select(type=="object" and .usage) | [.usage.model // "unknown",
          (.usage.input_tokens // 0), (.usage.output_tokens // 0),
          (.usage.cache_read_tokens // 0), (.usage.cache_creation_tokens // 0)]
          | @tsv' "$EVENTS_FILE" 2>/dev/null \

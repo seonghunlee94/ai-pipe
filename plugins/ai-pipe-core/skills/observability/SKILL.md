@@ -30,7 +30,7 @@ user-invocable: false
 | `escalation` | `task_id`, `to` |
 | `session_stop` | `branch`, `dirty_files` (Stop 훅이 기록) |
 
-`adp-watch <slug>` 로 실시간 추적, `adp-watch <slug> --replay` 로 재생, `--cost` 로 비용 요약.
+`${CLAUDE_PLUGIN_DIR}/bin/adp-watch <slug>` 로 실시간 추적, `... <slug> --replay` 로 재생, `--cost` 로 비용 요약 (`bin/` 이 PATH 에 자동 등록되는지는 README §6 미확정 — 전체 경로로 호출).
 
 ## 2. Token / cost tracking
 
