@@ -51,7 +51,7 @@ user-invocable: false
 
 ## 5. Output Contracts
 
-- 입출력 JSON은 반드시 `.claude/shared/schemas/impl-agent-{input,output}.schema.json` (또는 역할별 스키마)를 따른다.
+- 입출력 JSON은 반드시 `${CLAUDE_PLUGIN_DIR}/shared/schemas/impl-agent-{input,output}.schema.json` (또는 역할별 스키마)를 따른다.
 - `downstream_notes`는 항상 object (빈 `{}`도 허용, `null` 금지) — spec §4.3.
 - `status` 값: `"success"`, `"failure"`, `"partial"` 중 하나.
 

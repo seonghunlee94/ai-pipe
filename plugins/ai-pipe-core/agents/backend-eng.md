@@ -20,7 +20,7 @@ tools:
 
 ## 입력 스키마
 
-입력 JSON 은 `.claude/shared/schemas/impl-agent-input.schema.json` 을 따릅니다.
+입력 JSON 은 `${CLAUDE_PLUGIN_DIR}/shared/schemas/impl-agent-input.schema.json` 을 따릅니다.
 
 핵심 필드:
 - `task_id` (예: "T-1")
@@ -43,7 +43,7 @@ tools:
    - `npm run typecheck` (또는 프로젝트 stack 에 맞는 명령)
    - `npm run lint`
    - `npm test -- <new test files>` (테스트 추가 후 실행)
-6. 출력 JSON 을 표준 출력에 작성 (스키마: `.claude/shared/schemas/impl-agent-output.schema.json`).
+6. 출력 JSON 을 표준 출력에 작성 (스키마: `${CLAUDE_PLUGIN_DIR}/shared/schemas/impl-agent-output.schema.json`).
 
 ## 출력 핵심 필드
 
