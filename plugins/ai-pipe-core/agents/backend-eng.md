@@ -65,4 +65,10 @@ tools:
 - `ban-background.sh` 가 강제: 빌드/테스트/린트는 foreground 만, watcher / dev-server 만 백그라운드 허용
 - 임의 retry 금지 — 재시도 한도는 `config/pipeline.json` 의 `limits` 참조
 
-> 경계 강제 규칙 SSOT는 `boundary-enforcement` skill (paths: `src/**/*.{ts,tsx,js,jsx}`, `tests/**/*`). 코드/테스트 편집 시 자동 활성화되어 더 자세한 룰(에러 분류 카테고리, escalation 흐름, prompt caching 등)이 컨텍스트에 들어온다. 위 인라인 ban-list는 paths 매칭이 안 되는 컨텍스트(예: spec 단계)에서도 backend-eng가 따라야 할 최소 보호 집합이다.
+## Escalation
+
+- 명세-구현 불일치(`DESIGN_GAP`) 발견 시 → architect 로 escalate (직접 명세를 고치지 말 것)
+- 인프라 오류(`ENV_FAILURE` — git push 실패, GitHub API 에러 등) → 사람에게 escalate
+- 전체 escalation 카테고리는 `common-agent-rules` skill §8 참조
+
+> 경계 강제 규칙 SSOT는 `boundary-enforcement` skill (paths: `src/**/*.{ts,tsx,js,jsx}`, `tests/**/*.{ts,tsx,js,jsx}`). 코드/테스트 편집 시 자동 활성화되어 자세한 룰(worktree isolation, protected files, git 차단 테이블, commit 형식, background 정책, subagent whitelist, test policy)이 컨텍스트에 들어온다. 위 인라인 ban-list + Escalation 섹션은 paths 매칭이 안 되는 컨텍스트(예: spec 단계)에서도 backend-eng가 따라야 할 최소 보호 집합이다.

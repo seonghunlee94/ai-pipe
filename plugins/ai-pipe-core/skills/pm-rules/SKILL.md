@@ -3,11 +3,10 @@ name: pm-rules
 description: |
   Project-Manager-specific spec writing rules (REQ-N decomposition, Goals
   vs Non-Goals separation, user-story templates, acceptance criteria
-  patterns). Will auto-activate when writing or editing .artifacts/specs/.
-  Status: stub (PR3+ — full content TBD).
-paths:
-  - ".artifacts/specs/*-spec.md"
-disable-model-invocation: false
+  patterns). Status: STUB — paths auto-activation is intentionally
+  disabled until real content lands (PR3+). Planned paths:
+  .artifacts/specs/*-spec.md.
+disable-model-invocation: true
 user-invocable: false
 ---
 

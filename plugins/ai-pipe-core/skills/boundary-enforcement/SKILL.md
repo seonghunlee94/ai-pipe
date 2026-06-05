@@ -23,7 +23,7 @@ user-invocable: false
 
 # Boundary Enforcement (SSOT)
 
-이 문서는 ai-pipe의 에이전트 경계 규칙의 단일 진실 원천(SSOT)이다. PR2부터는 `paths` frontmatter로 impl 에이전트와 소스 코드 작업 시 자동 활성화된다.
+이 문서는 ai-pipe의 에이전트 경계 규칙의 단일 진실 원천(SSOT)이다. `paths` frontmatter에 의해 **소스/테스트 파일을 read/edit 할 때** 자동 활성화된다 (subagent 호출 자체로는 트리거되지 않음 — 그래서 impl 에이전트 정의 파일들은 핵심 ban-list를 인라인으로 갖고 있고, 이 문서는 그보다 깊은 룰을 보충한다).
 
 ---
 

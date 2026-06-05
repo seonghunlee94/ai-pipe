@@ -17,7 +17,7 @@ user-invocable: false
 
 # Common Agent Rules (SSOT)
 
-이 문서는 모든 ai-pipe 에이전트가 따라야 할 공통 규칙의 단일 진실 원천(SSOT)이다. PR2부터는 `paths` frontmatter로 자동 활성화되므로 명시적 SHARED_REF 참조는 더 이상 필요하지 않다.
+이 문서는 모든 ai-pipe 에이전트가 따라야 할 공통 규칙의 단일 진실 원천(SSOT)이다. `paths` frontmatter에 의해 **spec/plan 아티팩트를 read/edit 할 때** 자동 활성화된다 (subagent 호출 자체로는 트리거되지 않음). 그래서 각 에이전트 정의 파일은 핵심 ban-list를 인라인으로 갖고, 이 문서는 그보다 깊은 룰(escalation 카테고리, 비용/캐싱 전략, output 계약 세부)을 보충한다.
 
 ---
 
