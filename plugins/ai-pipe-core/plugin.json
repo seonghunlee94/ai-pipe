@@ -11,6 +11,13 @@
     "skills": "./skills"
   },
   "settings": "./settings.json",
+  "mcpServers": {
+    "github": {
+      "$comment": "Remote GitHub MCP server (PR3). project-ops prefers MCP tools; falls back to gh CLI when the server is unavailable. Field name pending empirical verification — see README §6.",
+      "type": "http",
+      "url": "https://api.githubcopilot.com/mcp/"
+    }
+  },
   "requirements": {
     "claudeCode": ">=2.1.0",
     "tools": ["jq", "gh", "bash", "git"]
