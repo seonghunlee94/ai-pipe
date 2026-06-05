@@ -27,11 +27,11 @@ user-invocable: false
 
 ---
 
-## 1. Worktree Isolation (spec §3.3)
+## 1. Worktree Isolation (spec §3.3, PR4부터 native)
 
-- 각 impl 에이전트는 자신에게 할당된 git worktree 안에서만 작업한다.
-- 다른 task의 worktree 디렉토리 접근 금지. 공유 코드 변경이 필요하면 `downstream_notes`로 다음 task에 위임.
-- worktree 경로는 `../task/{task_branch}` 패턴 (spec §3.3 참조 구현). 본인 worktree의 경로를 입력 JSON의 `task_branch`로 확인.
+- impl 에이전트(backend/frontend/infra-eng)는 frontmatter 의 `isolation: worktree` 에 의해 **하네스가 자동 생성한 격리 worktree** 안에서 실행된다. 에이전트가 `git worktree add/remove` 를 직접 실행하지 않는다 — 변경이 없으면 하네스가 worktree 를 자동 정리한다.
+- 자신의 worktree(= 현재 cwd) 밖 파일 접근 금지. 공유 코드 변경이 필요하면 `downstream_notes` 로 다음 task 에 위임.
+- task 브랜치는 worktree 안에서 `git checkout -b {task_branch}` 로 생성. merge 는 오케스트레이터가 직렬로 수행한다 (병렬 merge 금지 — race condition).
 
 ## 2. Protected Files (PreToolUse `verify-boundary.sh`로 강제)
 
