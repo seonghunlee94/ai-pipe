@@ -102,6 +102,6 @@ dev server, watcher, `tail -f` 등은 백그라운드 허용.
 ## 8. Credentials (PR5 — `secrets-scan.sh` 가 강제)
 
 - 자격 증명을 명령어/파일에 literal 로 쓰는 것 금지 — transcript/로그/git history 에 남는다.
-- `secrets-scan.sh` (PreToolUse Edit|Write + Bash) 가 차단하는 패턴: GitHub PAT (`ghp_`/`github_pat_`/`gh[ours]_`), AWS key (`AKIA`/secret), Anthropic·OpenAI API key (`sk-ant-`/`sk-`), Slack 토큰 (`xox?-`), private key 블록, JWT, curl literal Authorization 헤더, curl inline basic-auth.
+- `secrets-scan.sh` (PreToolUse Edit|Write + Bash) 가 차단하는 패턴: GitHub PAT (`ghp_`/`github_pat_`/`gh[ours]_`), AWS key (`AKIA`/secret), Anthropic·OpenAI API key (`sk-ant-`/`sk-`), Slack 토큰 (`xox?-`), private key 블록, JWT, literal Authorization 헤더 (도구 무관 — token/Bearer + literal 값), curl/wget inline basic-auth (`-u user:pass`).
 - 환경변수 확장 형태(`-H "Authorization: Bearer $TOKEN"`)는 허용 — literal 만 차단.
 - 인증은 `gh auth` credential store / OS keychain / 세션 밖에서 구성한 환경으로만.
