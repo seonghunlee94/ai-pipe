@@ -48,8 +48,10 @@ if grep -qE 'AKIA[0-9A-Z]{16}' <<<"$TEXT"; then block "AWS access key ID"; fi
 if grep -qiE 'aws_secret_access_key[[:space:]]*[=:][[:space:]]*[A-Za-z0-9/+=]{40}' <<<"$TEXT"; then block "AWS secret access key"; fi
 # Anthropic API key
 if grep -qE 'sk-ant-[A-Za-z0-9_-]{20,}' <<<"$TEXT"; then block "Anthropic API key"; fi
-# OpenAI-style keys (sk- + 20+), guarded to avoid matching sk-ant twice
-if grep -qE 'sk-[A-Za-z0-9]{20,}' <<<"$TEXT" && ! grep -qE 'sk-ant-' <<<"$TEXT"; then block "API key (sk- prefix)"; fi
+# OpenAI-style keys: sk- followed by 20+ chars but NOT the sk-ant- prefix
+# (that's matched above). The negative lookahead-style guard keeps this from
+# firing on Anthropic keys without skipping a co-located OpenAI key.
+if grep -qE 'sk-(proj-|svcacct-)?[A-Za-z0-9]{20,}' <<<"$TEXT" && ! grep -qE 'sk-ant-[A-Za-z0-9]{20,}' <<<"$TEXT"; then block "API key (sk- prefix)"; fi
 # Slack tokens
 if grep -qE 'xox[baprs]-[A-Za-z0-9-]{10,}' <<<"$TEXT"; then block "Slack token"; fi
 # Private key blocks
@@ -61,13 +63,15 @@ if grep -qE 'eyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}' <<<"
 if [[ "$TOOL" == "Bash" || -z "$TOOL" ]]; then
   CMD=$(jq -r '.tool_input.command // empty' <<<"$INPUT")
   if [[ -n "$CMD" ]]; then
-    # curl -H "Authorization: token/Bearer <literal>" — allow $VAR expansion forms
-    if grep -qiE 'curl[^|;]*-H[[:space:]]+["'"'"']?authorization:[[:space:]]*(token|bearer)[[:space:]]+[A-Za-z0-9_.-]{8,}' <<<"$CMD" \
+    # curl -H "Authorization: token/Bearer <literal>" — allow $VAR expansion forms.
+    # [^|;&] stops the curl-scope at any shell separator so a later command's
+    # flags aren't misattributed to curl.
+    if grep -qiE 'curl[^|;&]*-H[[:space:]]+["'"'"']?authorization:[[:space:]]*(token|bearer)[[:space:]]+[A-Za-z0-9_.-]{8,}' <<<"$CMD" \
        && ! grep -qiE 'authorization:[[:space:]]*(token|bearer)[[:space:]]+\$' <<<"$CMD"; then
       block "curl with literal Authorization header (use gh CLI or MCP instead)"
     fi
     # curl -u user:password literal
-    if grep -qE 'curl[^|;]*[[:space:]]-u[[:space:]]+[^[:space:]$]+:[^[:space:]$]+' <<<"$CMD"; then
+    if grep -qE 'curl[^|;&]*[[:space:]]-u[[:space:]]+[^[:space:]$]+:[^[:space:]$]+' <<<"$CMD"; then
       block "curl with inline basic-auth credentials"
     fi
   fi

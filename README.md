@@ -107,7 +107,7 @@ MCP 연결이 없어도 project-ops 는 gh CLI 로 동작한다 (기능 동일, 
 
 | 영역 | 상태 | spec |
 |------|------|------|
-| `settings.json` (5개 훅 wired, `${CLAUDE_PLUGIN_DIR}` substitution) | working | §7.1 |
+| `settings.json` (PreToolUse 6종 + SessionStart + Stop wired, `${CLAUDE_PLUGIN_DIR}` substitution) | working | §7.1 |
 | `hooks/verify-boundary.sh` (suffix-match, empty agent_type 통과, exit 2) | working | §7.2 |
 | `hooks/verify-git-safety.sh` (force-push/reset --hard/branch -D/clean -f/restore ./amend/--no-verify) | working | §7.3 |
 | `hooks/validate-commit-msg.sh` (Conventional Commits + HEREDOC 인식) | working | §7.3 |
@@ -140,7 +140,7 @@ MCP 연결이 없어도 project-ops 는 gh CLI 로 동작한다 (기능 동일, 
 
 ### 훅 검증
 
-5개 훅 모두 `bash -n` 통과 + 정상/위반 케이스 동작 확인. exit code는 Claude Code 규약(2 = block) 준수.
+8개 훅 모두 `bash -n` 통과 + 정상/위반 케이스 동작 확인. PreToolUse 차단 훅 6종(verify-boundary, verify-git-safety, validate-commit-msg, ban-background, validate-subagent-type, secrets-scan)은 Claude Code 규약(2 = block)을 따르고, lifecycle 훅 2종(session-start, stop-checkpoint)은 best-effort 로 항상 exit 0 (세션을 막지 않음).
 
 ---
 
