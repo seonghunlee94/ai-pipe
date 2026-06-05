@@ -68,4 +68,4 @@ tools:
 - 파일 시스템 오류 등 인프라 문제 → `ENV_FAILURE` 로 사람에게 escalate
 - 전체 escalation 카테고리는 `common-agent-rules` skill §8 참조
 
-> 더 깊은 공통 규칙(escalation 카테고리 전체 표, prompt caching 전략, output schema 등)은 `common-agent-rules` skill이 SSOT로 유지한다. 이 파일은 PM이 자율적으로 따라야 할 핵심 ban-list만 인라인한다.
+> 더 깊은 공통 규칙(escalation 카테고리 전체 표, prompt caching 전략, output schema 등)은 `common-agent-rules` skill이 SSOT로 유지한다. 위 인라인 ban-list 와 Escalation 섹션은 PM이 어떤 컨텍스트에서도 따라야 할 최소 집합이다.

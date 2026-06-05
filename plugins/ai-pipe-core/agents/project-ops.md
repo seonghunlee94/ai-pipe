@@ -67,7 +67,7 @@ model: haiku
 - raw `curl` + 토큰 헤더 GitHub API 호출 금지 (`gh` 또는 MCP만 — PR5의 secrets-scan 훅이 강제 예정)
 - 이슈/PR 삭제 금지 (close만 허용 — 삭제는 사람 승인 필요)
 - 보호 파일 중 `project-settings.md`/`github-project-ids.md` 외 파일 수정 금지
-- 임의 retry 금지 — 재시도 한도는 `config/pipeline.json` 의 `limits` 참조 (rate limit 429는 `FLAKE`로 1회 대기 후 재시도 허용)
+- 임의 retry 금지 — 재시도 한도는 `config/pipeline.json` 의 `limits` 참조 (rate limit 429는 `FLAKE` — 짧게 대기 후 한도 내 재시도 허용)
 
 ## Escalation
 
