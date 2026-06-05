@@ -21,11 +21,13 @@ allowed-tools:
 ## 절차 (Claude가 직접 수행 — 자체 DAG runtime 없음)
 
 1. **Plan 파싱**: `.artifacts/plans/{slug}-plan.md` 에서 task 목록과 의존성을 읽는다. 각 task 는 `task_id`, `task_branch`, 담당 에이전트(backend-eng/frontend-eng/infra-eng), 의존 task 목록을 가진다.
-2. **위상 정렬**: 의존성이 없는 task 들을 같은 그룹으로 묶는다 (spec §4.2 패턴 B).
-3. **Fan-out**: 같은 그룹의 task 들을 `Agent` tool 로 병렬 호출. impl 에이전트들은 frontmatter 의 `isolation: worktree` 에 의해 하네스가 자동으로 격리된 worktree 에서 실행한다 — 이 skill 이 `git worktree` 명령을 직접 실행하지 않는다.
-4. **Fan-in (직렬 merge)**: 그룹의 모든 task 가 끝나면 각 task 브랜치를 feature 브랜치에 **직렬로** merge 한다 (동시 merge 금지 — race condition 방지, spec §3.3).
-5. **이벤트 기록**: 각 단계를 `.artifacts/runs/{slug}-events.jsonl` 에 append (`task_start`/`task_done`/`task_retry`/`escalation`, spec §12.1).
-6. **실패 처리**: task 실패 시 `common-agent-rules` skill §8 의 오류 분류에 따라 재시도/escalate. 재시도 한도는 `config/pipeline.json` 의 `limits`.
+2. **Base 브랜치 보장**: fan-out 전에 메인 세션이 `feature_branch` 를 checkout 한 상태인지 확인한다 — native worktree 는 현재 HEAD 에서 분기하므로, main 에 있으면 task 들이 잘못된 base 에서 시작한다.
+3. **위상 정렬**: 의존성이 없는 task 들을 같은 그룹으로 묶는다 (spec §4.2 패턴 B).
+4. **Fan-out**: 같은 그룹의 task 들을 `Agent` tool 로 병렬 호출. impl 에이전트들은 frontmatter 의 `isolation: worktree` 에 의해 하네스가 자동으로 격리된 worktree 에서 실행한다 — 이 skill 이 `git worktree` 명령을 직접 실행하지 않는다.
+5. **Fan-in (직렬 merge)**: 그룹의 모든 task 가 끝나면 각 task 브랜치를 feature 브랜치에 **직렬로** merge 한다 (동시 merge 금지 — race condition 방지, spec §3.3).
+6. **Merge 후 정리**: merge 된 task 브랜치는 `git branch -d` (안전 삭제 — `-D` 는 hook 이 차단). 변경 없는 worktree 는 하네스가 자동 정리하고, 변경 있던 worktree 잔존물은 merge 확인 후 이 단계에서 정리한다.
+7. **이벤트 기록**: 각 단계를 `.artifacts/runs/{slug}-events.jsonl` 에 append (`task_start`/`task_done`/`task_retry`/`escalation`, spec §12.1).
+8. **실패 처리**: task 실패 시 `common-agent-rules` skill §8 의 오류 분류에 따라 재시도/escalate. 재시도 한도는 `config/pipeline.json` 의 `limits`.
 
 ## 금지 사항
 

@@ -35,7 +35,11 @@ tools:
 ## 작업 절차
 
 1. 입력 JSON 을 호출 프롬프트에서 파싱.
-2. `git checkout -b ${task_branch}` (현재 worktree 안에서 task 브랜치 생성 — worktree 자체는 하네스가 이미 격리해 두었다).
+2. task 브랜치 준비 (멱등 — 재시도 시 브랜치가 이미 남아 있을 수 있다):
+   - `git rev-parse --verify ${task_branch}` 로 존재 확인
+   - 없으면: `git checkout -b ${task_branch} ${feature_branch}` (feature 브랜치를 base 로 생성)
+   - 있으면: `git checkout ${task_branch}` (재시도 — 이전 시도의 작업 위에서 계속)
+   - worktree 자체는 하네스가 이미 격리해 두었다. `git worktree` / `git branch -D` 실행 금지.
 3. 구현 작업:
    - 명세에 정의된 REQ-N 을 코드로 옮긴다.
    - 모든 public 함수에 타입 명시.
@@ -58,7 +62,7 @@ tools:
 
 ## 금지 사항
 
-- 다른 task 의 worktree 파일 접근 금지 (PreToolUse `verify-boundary.sh` 가 차단)
+- 다른 task 의 worktree 파일 접근 금지 — 하네스의 worktree 격리가 물리적으로 분리하고, 이 규약이 cwd 밖 접근을 금지한다 (`verify-boundary.sh` 는 보호 파일 4종만 차단하며 worktree 경계는 검사하지 않음)
 - `git push --force`, `git reset --hard` 금지
 - `.claude/rules/project-settings.md` 등 보호 파일 수정 금지 (project-ops 전담)
 - 테스트 삭제 금지 — 기존 테스트가 실패하면 코드를 고친다, 테스트를 지우지 않는다

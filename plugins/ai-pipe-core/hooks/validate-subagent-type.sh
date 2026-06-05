@@ -42,9 +42,11 @@ for BI in "${BUILTIN[@]}"; do
   [[ "$REQUESTED" == "$BI" ]] && exit 0
 done
 
-# Resolve MAIN project root. Inside a git worktree, --show-toplevel returns
-# the worktree dir (which doesn't have .claude/agents), so we use
+# Resolve MAIN project root. Inside a git worktree (incl. the native
+# isolation: worktree kind), --show-toplevel returns the worktree dir; we use
 # --git-common-dir to find the main .git, then its parent is the main repo.
+# (Worktrees do check out tracked .claude/ content, but resolving against the
+# main root keeps the allowlist stable regardless of worktree checkout state.)
 PROJECT_ROOT="${CLAUDE_PROJECT_DIR:-}"
 if [[ -z "$PROJECT_ROOT" ]]; then
   COMMON_DIR=$(git rev-parse --git-common-dir 2>/dev/null || true)

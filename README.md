@@ -116,7 +116,8 @@ MCP 연결이 없어도 project-ops 는 gh CLI 로 동작한다 (기능 동일, 
 | `agents/pm.md`, `agents/backend-eng.md`, `agents/project-ops.md` | working | §6.1, §3.2 |
 | `agents/{architect,frontend-eng,infra-eng,qa,test-*,reviewer,verifier}.md` (9개) | stub | §4.1 |
 | `skills/create-spec/SKILL.md` (`user-invocable: true` → `/create-spec`) | working | §4.2 |
-| `skills/{design-plan,execute-plan}/SKILL.md` | stub | §4.2 |
+| `skills/design-plan/SKILL.md` | stub | §4.2 |
+| `skills/execute-plan/SKILL.md` (native fan-out/직렬 merge 절차 — isolation 필드 미실증) | working* | §4.2 |
 | `skills/common-agent-rules/SKILL.md` (paths 자동 활성화) | working | §6.1 |
 | `skills/boundary-enforcement/SKILL.md` (paths 자동 활성화) | working | §6.1, §7.2 |
 | `skills/{pm-rules,backend-conventions}/SKILL.md` (paths 비활성 — 본문 채워질 때 활성화) | stub | §5.1, §6.1 |
