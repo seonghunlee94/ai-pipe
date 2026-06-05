@@ -113,7 +113,7 @@ MCP 연결이 없어도 project-ops 는 gh CLI 로 동작한다 (기능 동일, 
 | `hooks/validate-commit-msg.sh` (Conventional Commits + HEREDOC 인식) | working | §7.3 |
 | `hooks/ban-background.sh` (npm/yarn/pnpm/tsc/vitest/jest/pytest/cargo/go/make/gradle/mvn/bazel) | working | §7.3 |
 | `hooks/validate-subagent-type.sh` (`CLAUDE_PROJECT_DIR` 우선, 워크트리 안전) | working | §7.3 |
-| `hooks/secrets-scan.sh` (PAT/AWS/API key/JWT/curl 토큰 헤더 차단 — Edit\|Write+Bash) | working | PR5 |
+| `hooks/secrets-scan.sh` (PAT/AWS/API key/JWT/Authorization 헤더(도구 무관)/curl·wget basic-auth 차단 — Edit\|Write+Bash) | working | PR5 |
 | `hooks/session-start.sh` (세션 시작 컨텍스트 주입 — 버전/브랜치/worktree/마지막 이벤트) | working* | PR5, §6 item 8 |
 | `hooks/stop-checkpoint.sh` (세션 종료 시 JSONL checkpoint append) | working* | PR5, §12.1 |
 | `agents/pm.md`, `agents/backend-eng.md`, `agents/project-ops.md` | working | §6.1, §3.2 |
@@ -152,7 +152,7 @@ MCP 연결이 없어도 project-ops 는 gh CLI 로 동작한다 (기능 동일, 
 | PR2 | `shared/agent-rules/`, `commands/` → `skills/{name}/SKILL.md` 마이그레이션, `paths` frontmatter 자동 활성화, agent의 SHARED_REF 블록 제거 (9 review rounds, 22 findings) |
 | PR3 | MCP github 서버 통합 → `scripts/gh/*.sh` 폐기, `project-ops` 풀 에이전트 재정의 (4 review rounds, 13 findings) |
 | PR4 | Native `isolation: worktree` (impl 3종) → 자체 DAG runtime 폐기, execute-plan 재작성 (3 review rounds, 12 findings) |
-| **PR5 (이 커밋)** | Hooks v2: `secrets-scan.sh` (credential 패턴 + curl 토큰 헤더 차단), `session-start.sh` (컨텍스트 주입), `stop-checkpoint.sh` (JSONL checkpoint). PostToolUse 는 PR6 observability 와 병합 |
+| **PR5 (이 커밋)** | Hooks v2: `secrets-scan.sh` (credential 패턴 + 도구 무관 Authorization 헤더 + curl/wget basic-auth 차단), `session-start.sh` (컨텍스트 주입), `stop-checkpoint.sh` (JSONL checkpoint). PostToolUse 는 PR6 observability 와 병합 |
 | PR6 | Observability: 토큰/비용 JSONL, eval harness 시드 |
 
 근거: 2026년 6월 기준 Claude Code는 Skills/Subagents/Plugin Marketplace/native worktree isolation을 표준으로 제공한다. 스펙(2025 amf 기반)이 자체 구현하던 대부분이 네이티브로 대체된다. 자세한 분석은 PR1 커밋 메시지 / 본 리포 git log 참조.
