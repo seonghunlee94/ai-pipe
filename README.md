@@ -13,18 +13,18 @@ Claude Code 기반 멀티 에이전트 자동화 파이프라인. **Claude Code 
 macOS (BSD sed):
 
 ```bash
-grep -rl 'your-org' . --include='*.json' --include='*.md' --include='*.yml' --include='*.ts' --include='.npmrc' \
+grep -rl 'your-org' . --include='*.json' --include='*.md' --include='*.ts' --include='.npmrc' \
   | xargs sed -i '' 's/your-org/YOUR_REAL_ORG/g'
 ```
 
 Linux / WSL (GNU sed):
 
 ```bash
-grep -rl 'your-org' . --include='*.json' --include='*.md' --include='*.yml' --include='*.ts' --include='.npmrc' \
+grep -rl 'your-org' . --include='*.json' --include='*.md' --include='*.ts' --include='.npmrc' \
   | xargs sed -i 's/your-org/YOUR_REAL_ORG/g'
 ```
 
-대상 파일: `package.json`, `package-lock.json`, `.npmrc`, `README.md`, `.github/workflows/publish.yml`, `.claude-plugin/marketplace.json`, `plugins/ai-pipe-core/plugin.json`, `plugins/ai-pipe-core/shared/schemas/*.json` ($id), `src/init.ts` (안내 출력), `src/versions.ts` (주석). 치환 후 `npm run build`로 dist 재생성 필요.
+대상 파일: `package.json`, `package-lock.json`, `.npmrc`, `README.md`, `.claude-plugin/marketplace.json`, `plugins/ai-pipe-core/plugin.json`, `plugins/ai-pipe-core/shared/schemas/*.json` ($id), `src/init.ts` (안내 출력), `src/versions.ts` (주석). 치환 후 `npm run build`로 dist 재생성 필요. (`.github/workflows/publish.yml`은 org 무관 — GITHUB_TOKEN 기반.)
 
 ---
 
