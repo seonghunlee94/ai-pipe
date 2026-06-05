@@ -31,7 +31,7 @@ user-invocable: false
 
 - impl 에이전트(backend/frontend/infra-eng)는 frontmatter 의 `isolation: worktree` 에 의해 **하네스가 자동 생성한 격리 worktree** 안에서 실행된다. 에이전트가 `git worktree add/remove` 를 직접 실행하지 않는다 — 변경이 없으면 하네스가 worktree 를 자동 정리한다.
 - 자신의 worktree(= 현재 cwd) 밖 파일 접근 금지. 공유 코드 변경이 필요하면 `downstream_notes` 로 다음 task 에 위임.
-- task 브랜치는 worktree 안에서 `git checkout -b {task_branch}` 로 생성. merge 는 오케스트레이터가 직렬로 수행한다 (병렬 merge 금지 — race condition).
+- task 브랜치 준비는 멱등 절차를 따른다: `git rev-parse --verify --quiet refs/heads/{task_branch}` 로 존재 확인 → 없으면 `git checkout -b {task_branch} {feature_branch}`, 있으면 (재시도) `git checkout {task_branch}`. merge 는 오케스트레이터가 직렬로 수행한다 (병렬 merge 금지 — race condition). 실패 attempt 의 worktree 잔존물 정리도 오케스트레이터 책임 (`execute-plan` skill step 8).
 
 ## 2. Protected Files (PreToolUse `verify-boundary.sh`로 강제)
 

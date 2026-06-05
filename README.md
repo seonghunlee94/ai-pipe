@@ -125,7 +125,7 @@ MCP 연결이 없어도 project-ops 는 gh CLI 로 동작한다 (기능 동일, 
 | `scripts/validate/*.sh` | stub | §10.2, §11.2 |
 | GitHub 작업 — `gh` CLI 경로 working / MCP 경로 미실증 (§6 item 6, `scripts/gh/` 는 PR3에서 폐기) | working* | §3.2 |
 | `bin/adp-watch` | stub | §12.2 |
-| Worktree 격리 — impl 에이전트 `isolation: worktree` frontmatter (native, 자체 DAG runtime 은 PR4에서 폐기) | working* | §3.3 |
+| Worktree 격리 — impl 에이전트 `isolation: worktree` frontmatter (native, §6 item 7 미실증, 자체 DAG runtime 은 PR4에서 폐기) | working* | §3.3 |
 
 ### CLI (`src/`)
 

@@ -36,10 +36,10 @@ tools:
 
 1. 입력 JSON 을 호출 프롬프트에서 파싱.
 2. task 브랜치 준비 (멱등 — 재시도 시 브랜치가 이미 남아 있을 수 있다):
-   - `git rev-parse --verify ${task_branch}` 로 존재 확인
+   - `git rev-parse --verify --quiet refs/heads/${task_branch}` 로 존재 확인 (동명 파일/태그와의 모호성 방지)
    - 없으면: `git checkout -b ${task_branch} ${feature_branch}` (feature 브랜치를 base 로 생성)
-   - 있으면: `git checkout ${task_branch}` (재시도 — 이전 시도의 작업 위에서 계속)
-   - worktree 자체는 하네스가 이미 격리해 두었다. `git worktree` / `git branch -D` 실행 금지.
+   - 있으면: `git checkout ${task_branch}` (재시도 — 마지막 commit 시점부터 계속. 이전 attempt 의 uncommitted 변경은 오케스트레이터의 worktree 정리와 함께 사라진다)
+   - worktree 자체는 하네스가 이미 격리해 두었다. `git worktree` / `git branch -D` 실행 금지 — 잔존물 정리는 오케스트레이터 책임 (`execute-plan` step 8).
 3. 구현 작업:
    - 명세에 정의된 REQ-N 을 코드로 옮긴다.
    - 모든 public 함수에 타입 명시.
