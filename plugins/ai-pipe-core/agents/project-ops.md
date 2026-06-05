@@ -10,4 +10,5 @@ tools: []
 ---
 
 <!-- TODO: spec §3.2, §4.1 — implement role definition.
-     Uses .claude/scripts/gh/*.sh wrappers. Must NOT write source code. -->
+     Uses ${CLAUDE_PLUGIN_DIR}/scripts/gh/*.sh wrappers (PR3 will replace
+     these with the MCP github server). Must NOT write source code. -->
