@@ -41,14 +41,15 @@ tools:
 
 ```json
 {
-  "status": "success",
+  "status": "success | failure",
   "slug": "user-authentication",
   "spec_path": ".artifacts/specs/user-authentication-spec.md",
   "req_ids": ["REQ-1", "REQ-2", "REQ-3"],
   "downstream_notes": {
     "key_entities": ["User", "Session"],
     "external_deps": ["bcrypt", "jsonwebtoken"]
-  }
+  },
+  "error": "(failure 일 때만) 실패 사유 한 줄"
 }
 ```
 
@@ -58,7 +59,13 @@ tools:
 - `git commit`, `git push` 등 git 변경 작업 금지
 - 사용자가 제시하지 않은 요구사항을 임의로 추가 금지 (가정이 필요하면 spec 내 "Assumptions" 섹션에 명시)
 - `downstream_notes` 를 null 로 두지 말 것 (spec §4.3, 최소 빈 object `{}`)
-- 자신의 역할 경계 밖 작업은 즉시 거부하고 적절한 에이전트로 escalate
 - 임의 retry 금지 — 재시도 한도는 `config/pipeline.json` 의 `limits` 참조
 
-> 더 깊은 공통 규칙(escalation 카테고리, prompt caching 전략, output schema 등)은 `common-agent-rules` skill이 SSOT로 유지한다. 이 파일은 PM이 자율적으로 따라야 할 핵심 ban-list만 인라인한다.
+## Escalation
+
+- 요구사항이 자기모순이거나 사용자 입력만으로 결정 불가 → 사용자에게 질문 (임의 가정으로 채우지 말 것)
+- 기술 아키텍처 판단이 필요한 요구 (예: "어떤 DB가 좋을까") → architect 영역으로 표시하고 spec 에 open question 으로 기록
+- 파일 시스템 오류 등 인프라 문제 → `ENV_FAILURE` 로 사람에게 escalate
+- 전체 escalation 카테고리는 `common-agent-rules` skill §8 참조
+
+> 더 깊은 공통 규칙(escalation 카테고리 전체 표, prompt caching 전략, output schema 등)은 `common-agent-rules` skill이 SSOT로 유지한다. 이 파일은 PM이 자율적으로 따라야 할 핵심 ban-list만 인라인한다.

@@ -87,7 +87,7 @@ ai-pipe init .
 ```bash
 $EDITOR .claude/rules/project-settings.md   # org, repo, short, default assignee
 $EDITOR .claude/config/pipeline.json        # 재시도 한도, 브랜치 패턴 (필요 시)
-gh auth login                                # project-ops 의 gh CLI fallback 인증
+gh auth login                                # project-ops 의 gh CLI 인증 (Projects V2 mutation 에 필수)
 ```
 
 **GitHub MCP 서버 인증 (project-ops 의 1순위 경로):** remote GitHub MCP 서버(`https://api.githubcopilot.com/mcp/`)는 자체 OAuth 인증이 필요하다. plugin 의 `mcpServers` 선언이 동작하지 않는 환경에서는 수동 연결:
@@ -97,7 +97,7 @@ claude mcp add --transport http github https://api.githubcopilot.com/mcp/
 # 이후 Claude Code 가 OAuth 흐름 안내. PAT 방식이 필요하면 GitHub 공식 MCP 문서 참조.
 ```
 
-MCP 연결이 없어도 project-ops 는 gh CLI 로 동작한다 (기능 동일, 도구 호출 방식만 다름).
+MCP 연결이 없어도 project-ops 는 gh CLI 로 동작한다 (기능 동일, 도구 호출 방식만 다름). 단, **`gh auth login` 은 MCP 연결 여부와 무관하게 필수** — Projects V2 field mutation 은 MCP 서버가 다루지 못해 항상 `gh api graphql` 로 수행된다.
 
 ---
 

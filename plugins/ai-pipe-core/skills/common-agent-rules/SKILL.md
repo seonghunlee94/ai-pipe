@@ -68,6 +68,16 @@ user-invocable: false
 
 ## 8. Escalation
 
-- 명세-구현 불일치(`DESIGN_GAP`)는 architect로 escalate.
-- 인프라 오류(`ENV_FAILURE` — git push 실패, GitHub API 에러)는 사람에게 escalate.
-- 임의 retry 금지. 재시도 한도는 `config/pipeline.json`의 `limits` 참조.
+오류 분류 전체 카테고리 (spec §10.1):
+
+| 카테고리 | 의미 | 복구 행동 |
+|----------|------|----------|
+| `FLAKE` | 일시적 오류 (네트워크 타임아웃, rate limit 429) | 짧게 대기 후 1회 재시도 |
+| `LINT_ERROR` | 코드 스타일 위반 | 린트 컨텍스트 추가 후 재실행 |
+| `TYPE_ERROR` | 타입 불일치 | 타입 오류 컨텍스트 추가 후 재실행 |
+| `TEST_FAIL` | 테스트 실패 | 실패 로그 추가 후 재실행 |
+| `DESIGN_GAP` | 명세-구현 불일치 | **architect 로 escalate** |
+| `ENV_FAILURE` | 인프라 오류 (git push 실패, GitHub API/인증 오류) | **사람에게 escalate** |
+| `CONTEXT_EXHAUSTED` | 컨텍스트 한도 초과 | task 분할 후 재시도 (§7 참조) |
+
+- 임의 retry 금지. 카테고리별 재시도 한도는 `config/pipeline.json`의 `limits` 참조.
