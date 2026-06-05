@@ -10,9 +10,9 @@
     "thrash_consecutive": 3
   },
   "paths": {
+    "$comment": "scripts_dir removed — scripts moved into the plugin tree in PR2 (${CLAUDE_PLUGIN_DIR}/scripts/) and PR3 replaces gh wrappers with the MCP github server.",
     "artifacts": ".artifacts",
-    "conventions_dir": "docs/conventions",
-    "scripts_dir": ".claude/scripts"
+    "conventions_dir": "docs/conventions"
   },
   "project_board": {
     "statuses": {

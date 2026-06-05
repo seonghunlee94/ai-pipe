@@ -47,7 +47,7 @@ user-invocable: false
 ## 4. Tool Usage
 
 - 백그라운드 실행은 dev server / watcher / tail에만 허용. 빌드·테스트·린트는 항상 foreground — `ban-background.sh`가 차단.
-- 다른 서브에이전트는 `.claude/agents/*.md` 또는 빌트인(`Explore`, `Plan`, `general-purpose` 등) 중에서만 호출 — `validate-subagent-type.sh`가 화이트리스트.
+- 다른 서브에이전트는 plugin 에이전트(`${CLAUDE_PLUGIN_DIR}/agents/*.md`), 프로젝트 에이전트(`.claude/agents/*.md`, 있는 경우), 또는 빌트인(`Explore`, `Plan`, `general-purpose` 등) 중에서만 호출 — `validate-subagent-type.sh`가 양쪽 디렉토리에서 화이트리스트를 구성한다.
 
 ## 5. Output Contracts
 

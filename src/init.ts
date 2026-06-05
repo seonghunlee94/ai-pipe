@@ -21,7 +21,7 @@ import { hasFlag, readPackageInfo, resolveTargetDir, templateDir } from "./utils
 //
 // Drops user-editable files into <targetDir>/.claude/ (project-settings.md,
 // pipeline.json, settings.local.json.example) and patches .gitignore. The
-// agents/hooks/commands/scripts come from the ai-pipe-core plugin — see
+// agents/hooks/skills/scripts come from the ai-pipe-core plugin — see
 // README for the `/plugin marketplace add` flow.
 //
 // --force: overwrite the existing tree EXCEPT files on LOCAL_FILES (spec
@@ -102,7 +102,7 @@ function printNextSteps(target: string, version: string): void {
       `  • settings.local.json.example  (rename if you need local overrides)`,
       `  • .gitignore                   (patched for .artifacts/ etc.)`,
       ``,
-      `The agents, hooks, commands, and scripts come from the ai-pipe-core plugin.`,
+      `The agents, hooks, skills (incl. slash commands), and scripts come from the ai-pipe-core plugin.`,
       `Inside Claude Code, run:`,
       `  /plugin marketplace add github:your-org/ai-pipe`,
       `  /plugin install ai-pipe-core@ai-pipe`,
