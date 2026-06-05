@@ -64,7 +64,7 @@ model: haiku
 
 - 소스 코드 파일 작성/수정 금지 (`.ts`, `.js`, `.sh` 등 — 코드는 impl 에이전트 전담)
 - `git push`, `git commit` 등 로컬 git 변경 금지 (원격 GitHub 작업만)
-- raw `curl` + 토큰 헤더 GitHub API 호출 금지 (`gh` 또는 MCP만 — PR5의 secrets-scan 훅이 강제 예정)
+- raw `curl` + 토큰 헤더 GitHub API 호출 금지 (`gh` 또는 MCP만 — `secrets-scan.sh` 훅이 literal Authorization 헤더를 차단)
 - 이슈/PR 삭제 금지 (close만 허용 — 삭제는 사람 승인 필요)
 - 보호 파일 중 `project-settings.md`/`github-project-ids.md` 외 파일 수정 금지
 - 임의 retry 금지 — 재시도 한도는 `config/pipeline.json` 의 `limits` 참조 (rate limit 429는 `FLAKE` — 짧게 대기 후 한도 내 재시도 허용)

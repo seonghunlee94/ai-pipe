@@ -1,5 +1,5 @@
 {
-  "$comment": "ai-pipe-core plugin hook wiring. ${CLAUDE_PLUGIN_DIR} resolves to the plugin's cached location regardless of install path. Requires jq, gh, bash, git on PATH. PreToolUse hooks exit with code 2 to block (per Claude Code hook convention).",
+  "$comment": "ai-pipe-core plugin hook wiring. ${CLAUDE_PLUGIN_DIR} resolves to the plugin's cached location regardless of install path. Requires jq, gh, bash, git on PATH. PreToolUse hooks exit 2 to block (Claude Code convention); SessionStart stdout is injected into context; Stop hook is best-effort and never blocks session end.",
   "hooks": {
     "PreToolUse": [
       {
@@ -8,6 +8,10 @@
           {
             "type": "command",
             "command": "${CLAUDE_PLUGIN_DIR}/hooks/verify-boundary.sh"
+          },
+          {
+            "type": "command",
+            "command": "${CLAUDE_PLUGIN_DIR}/hooks/secrets-scan.sh"
           }
         ]
       },
@@ -25,6 +29,10 @@
           {
             "type": "command",
             "command": "${CLAUDE_PLUGIN_DIR}/hooks/ban-background.sh"
+          },
+          {
+            "type": "command",
+            "command": "${CLAUDE_PLUGIN_DIR}/hooks/secrets-scan.sh"
           }
         ]
       },
@@ -34,6 +42,26 @@
           {
             "type": "command",
             "command": "${CLAUDE_PLUGIN_DIR}/hooks/validate-subagent-type.sh"
+          }
+        ]
+      }
+    ],
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "${CLAUDE_PLUGIN_DIR}/hooks/session-start.sh"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "${CLAUDE_PLUGIN_DIR}/hooks/stop-checkpoint.sh"
           }
         ]
       }

@@ -98,3 +98,10 @@ dev server, watcher, `tail -f` 등은 백그라운드 허용.
 - 테스트 삭제 금지. 실패하면 코드를 고친다.
 - 명세에 명시되지 않은 기능 추가 금지 — 스코프 외 작업은 별도 task로 회부.
 - 새 코드는 최소 unit test 1개를 동반 (impl-agent-output.schema.json의 `tests_added`로 보고).
+
+## 8. Credentials (PR5 — `secrets-scan.sh` 가 강제)
+
+- 자격 증명을 명령어/파일에 literal 로 쓰는 것 금지 — transcript/로그/git history 에 남는다.
+- `secrets-scan.sh` (PreToolUse Edit|Write + Bash) 가 차단하는 패턴: GitHub PAT (`ghp_`/`github_pat_`/`gh[ours]_`), AWS key (`AKIA`/secret), Anthropic·OpenAI API key (`sk-ant-`/`sk-`), Slack 토큰 (`xox?-`), private key 블록, JWT, curl literal Authorization 헤더, curl inline basic-auth.
+- 환경변수 확장 형태(`-H "Authorization: Bearer $TOKEN"`)는 허용 — literal 만 차단.
+- 인증은 `gh auth` credential store / OS keychain / 세션 밖에서 구성한 환경으로만.
