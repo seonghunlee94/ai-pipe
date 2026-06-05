@@ -67,7 +67,7 @@ ai-pipe는 **두 채널**로 사용자 프로젝트에 도착한다:
 /plugin install ai-pipe-core@ai-pipe
 ```
 
-이 시점에서 에이전트(pm, backend-eng, …), 훅(verify-boundary 외 4개), 명령(`/create-spec`)이 활성화된다.
+이 시점에서 에이전트(pm, backend-eng, project-ops, …), 훅(PreToolUse 차단 6종 + SessionStart/Stop lifecycle 2종), skill·명령(`/create-spec` 등)이 활성화된다.
 
 ### 2-2. 프로젝트 부트스트랩 (선택 — 새 프로젝트마다 한 번)
 
