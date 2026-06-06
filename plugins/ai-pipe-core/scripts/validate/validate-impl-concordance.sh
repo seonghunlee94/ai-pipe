@@ -35,7 +35,9 @@ if [[ ! -f "$SPEC_FILE" || ! -r "$SPEC_FILE" ]]; then
   exit 2
 fi
 
-# `grep` exits 1 on no match; tolerate that (handled below) but not real errors.
+# `grep` exits 1 on no match; `|| true` tolerates that (and, under pipefail,
+# would also mask a real grep error — which is why readability is pre-checked
+# with -f/-r above rather than relying on grep's exit code).
 SPEC_REQS=$(grep -oE 'REQ-[0-9]+' "$SPEC_FILE" | sort -u || true)
 if [[ -z "$SPEC_REQS" ]]; then
   echo "validate-impl-concordance: no REQ-N found in $SPEC_FILE — a gate must not pass vacuously" >&2
@@ -44,8 +46,8 @@ fi
 
 COVERED_REQS=""
 for OUT in "$@"; do
-  if [[ ! -f "$OUT" ]]; then
-    echo "validate-impl-concordance: impl output not found: $OUT" >&2
+  if [[ ! -f "$OUT" || ! -r "$OUT" ]]; then
+    echo "validate-impl-concordance: impl output not found or not readable: $OUT" >&2
     exit 2
   fi
   # `?` tolerates outputs without the meta path (contributes nothing);

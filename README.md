@@ -2,7 +2,7 @@
 
 Claude Code 기반 멀티 에이전트 자동화 파이프라인. **Claude Code Plugin Marketplace**로 배포하여 다양한 프로젝트·머신에서 공유 가능하고, 프로젝트별 설정과 GitHub Issues/Projects V2 연동을 지원한다.
 
-> **현재 상태: PR6 (Observability)**. PreToolUse 6종 + SessionStart/Stop 훅, Skills 시스템, project-ops (MCP github + gh fallback), native worktree 격리, `adp-watch` 이벤트/비용 뷰어 + eval harness 시드. 자세한 설계는 [`multi-agent-pipeline-best-practices.md`](./multi-agent-pipeline-best-practices.md), 2026년 베스트 프랙티스 분석은 PR1 커밋 메시지 참조.
+> **현재 상태: DEV1–7 아크 완료 (퍼블리시 준비 단계)**. 12개 에이전트 전부 정의, spec→plan→execute 파이프라인 척추 연결, PreToolUse 6종 + SessionStart/Stop 훅, CLI 11개 명령(init/version/validate/eval + 라이프사이클 8종), Concordance Gate·오류 분류기, 4-레이어 테스트 스위트(typecheck/vitest/훅·스크립트 하네스) + CI. 남은 것: §0 퍼블리시 체크리스트(라이선스 선택·§6 실증 라운드는 사용자 소유). 자세한 설계는 [`multi-agent-pipeline-best-practices.md`](./multi-agent-pipeline-best-practices.md).
 
 ---
 
@@ -188,7 +188,8 @@ PreToolUse 차단 훅 6종(verify-boundary, verify-git-safety, validate-commit-m
 | PR3 | MCP github 서버 통합 → `scripts/gh/*.sh` 폐기, `project-ops` 풀 에이전트 재정의 (4 review rounds, 13 findings) |
 | PR4 | Native `isolation: worktree` (impl 3종) → 자체 DAG runtime 폐기, execute-plan 재작성 (3 review rounds, 12 findings) |
 | PR5 | Hooks v2: `secrets-scan.sh` (credential 패턴 + 도구 무관 Authorization 헤더 + curl/wget basic-auth 차단), `session-start.sh` (컨텍스트 주입), `stop-checkpoint.sh` (JSONL checkpoint) (5 review rounds, 8 findings) |
-| **PR6 (이 커밋)** | Observability: `adp-watch` 실구현 (이벤트 뷰어 + 토큰/비용 집계), `observability` skill (이벤트 스키마 / cache_control breakpoint 전략 / checkpoint), `shared/evals/` eval harness 시드 (스키마 + 1 케이스) |
+| PR6 | Observability: `adp-watch` 실구현 (이벤트 뷰어 + 토큰/비용 집계), `observability` skill (이벤트 스키마 / cache_control breakpoint 전략 / checkpoint), `shared/evals/` eval harness 시드 (스키마 + 1 케이스) (2 review rounds, 10 findings) |
+| DEV1–7 | 퍼블리시 준비 아크: `validate`/`eval` + 라이프사이클 CLI 8종 실구현, 테스트 스위트(vitest + 훅/스크립트 하네스 + CI), architect·design-plan 으로 파이프라인 척추 연결, 스텁 에이전트 8종 완성, Concordance Gate·오류 분류기, 퍼블리시 체크리스트 (각 단계 2-에이전트 리뷰 2회 연속 clean 까지 반복) |
 
 근거: 2026년 6월 기준 Claude Code는 Skills/Subagents/Plugin Marketplace/native worktree isolation을 표준으로 제공한다. 스펙(2025 amf 기반)이 자체 구현하던 대부분이 네이티브로 대체된다. 자세한 분석은 PR1 커밋 메시지 / 본 리포 git log 참조.
 

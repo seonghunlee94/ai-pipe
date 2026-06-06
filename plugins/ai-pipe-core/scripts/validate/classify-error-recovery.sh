@@ -56,10 +56,11 @@ fi
 if grep -qiE 'eslint|prettier|biome|stylelint|ruff|lint(ing)? (error|fail)' <<<"$LOG"; then
   emit LINT_ERROR retry_with_lint_context 1
 fi
-# `✗` / `FAIL ` are runner markers and stay CASE-SENSITIVE — a case-insensitive
-# match would classify prose like "deploy fail occurred" as a test failure.
+# `✗` / `FAIL<sep>` are runner markers and stay CASE-SENSITIVE — a
+# case-insensitive match would classify prose like "deploy fail occurred" as a
+# test failure. `FAIL[ :	]` also covers go test's `--- FAIL:` and `FAIL<tab>pkg`.
 if grep -qiE 'test(s)? fail|AssertionError|assertion fail|expected .* (to|but)' <<<"$LOG" \
-   || grep -qE '✗|FAIL ' <<<"$LOG"; then
+   || grep -qE '✗|FAIL[ :	]' <<<"$LOG"; then
   emit TEST_FAIL retry_with_failure_log 1
 fi
 

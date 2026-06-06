@@ -87,6 +87,11 @@ STDIN="deploy fail occurred during release window" \
 # Sentence-case "Type mismatch" lands on TYPE_ERROR (insensitive prose side).
 STDIN="Type mismatch: expected Foo but found Bar" \
   check "classify: Type mismatch" 1 '"TYPE_ERROR"'      -- bash "$K"
+# go test markers: `--- FAIL:` and `FAIL<tab>pkg` are runner markers too.
+STDIN="--- FAIL: TestFoo (0.01s)" \
+  check "classify: go FAIL:"     1 '"TEST_FAIL"'        -- bash "$K"
+STDIN=$'FAIL\texample.com/pkg\t0.123s' \
+  check "classify: go FAIL tab"  1 '"TEST_FAIL"'        -- bash "$K"
 
 echo "── script harness: $PASS passed, $FAIL failed ──"
 [[ "$FAIL" == 0 ]]
