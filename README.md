@@ -116,8 +116,7 @@ MCP 연결이 없어도 project-ops 는 gh CLI 로 동작한다 (기능 동일, 
 | `hooks/secrets-scan.sh` (PAT/AWS/API key/JWT/Authorization 헤더(도구 무관)/curl·wget basic-auth 차단 — Edit\|Write+Bash) | working | PR5 |
 | `hooks/session-start.sh` (세션 시작 컨텍스트 주입 — 버전/브랜치/worktree/마지막 이벤트) | working* | PR5, §6 item 8 |
 | `hooks/stop-checkpoint.sh` (세션 종료 시 JSONL checkpoint append) | working* | PR5, §12.1 |
-| `agents/pm.md`, `agents/backend-eng.md`, `agents/project-ops.md`, `agents/architect.md` | working | §6.1, §3.2, §4.1 |
-| `agents/{frontend-eng,infra-eng,qa,test-*,reviewer,verifier}.md` (8개) | stub | §4.1 |
+| `agents/{pm,backend-eng,project-ops,architect,frontend-eng,infra-eng,qa,reviewer,verifier,test-unit,test-e2e-api,test-e2e-ui}.md` (12종 전부 정의됨) | working | §4.1, §6.1, §3.2 |
 | `skills/create-spec/SKILL.md` (`user-invocable: true` → `/create-spec`) | working | §4.2 |
 | `skills/design-plan/SKILL.md` (`/design-plan <slug>` → architect 호출, spec→plan) | working | §4.2 |
 | `shared/formats/plan-format.md` (plan 정규 구조 SSOT — architect 생성, execute-plan 소비) | working | §4.4 |
@@ -162,7 +161,7 @@ PreToolUse 차단 훅 6종(verify-boundary, verify-git-safety, validate-commit-m
 
 - 산출물은 `.artifacts/`(specs/plans/runs) 아래에 떨어진다. 실행 이벤트는 `.artifacts/runs/{slug}-events.jsonl`, 진행/비용은 `${CLAUDE_PLUGIN_DIR}/bin/adp-watch {slug}`.
 - 로컬 단독(GitHub 미연동) 실행은 `config/pipeline.json` 의 `local_defaults`(story/issue=1)로 impl-agent-input 을 채운다. GitHub Issues/Projects 연동은 project-ops 에이전트가 담당.
-- 현재 impl 에이전트는 **backend-eng 만 완성** — frontend/infra-eng 가 필요한 plan 은 execute-plan 이 "미구현"으로 멈춘다 (DEV5 예정).
+- impl 에이전트 3종(backend/frontend/infra-eng)이 모두 정의됨 — plan 의 task 가 어느 레이어든 execute-plan 이 fan-out 한다. 검증 단계는 qa→test-*→reviewer→verifier(ship/no-ship) 에이전트가 담당.
 
 ---
 
