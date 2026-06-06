@@ -75,6 +75,8 @@ function walk(root: string, problems: Problem[]): string[] {
     }
     for (const ent of entries) {
       const full = join(dir, ent.name);
+      // Symlinks are neither isDir nor isFile here, so they are intentionally
+      // not followed (no traversal escape, no symlink loops) and not validated.
       if (ent.isDir) {
         if (!SKIP_DIRS.has(ent.name)) stack.push(full);
       } else if (ent.isFile) {
@@ -231,7 +233,7 @@ export async function runValidate(args: string[]): Promise<void> {
 
   // In strict mode warnings are failure-causing, so they must be shown even
   // under --quiet (otherwise a strict+quiet run exits 1 with no explanation).
-  const shown = quiet ? (strict ? problems : errors) : problems;
+  const shown = quiet && !strict ? errors : problems;
   for (const p of shown) {
     const tag = p.level === "error" ? "ERROR" : "warn ";
     process.stdout.write(`${tag}  ${p.file}: ${p.message}\n`);
