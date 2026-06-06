@@ -2,7 +2,7 @@ import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 
 import { AiPipeError } from "./errors.js";
-import { readOptionValue, readPackageInfo, resolveTargetDir } from "./utils.js";
+import { parseCommandArgs, readPackageInfo, resolveTargetDir } from "./utils.js";
 
 export type VersionStatus =
   | "in-sync"
@@ -45,7 +45,9 @@ function parseSemver(v: string): Semver {
 }
 
 export async function runVersion(args: string[]): Promise<void> {
-  const projectPath = readOptionValue(args, "--project");
+  const { values } = parseCommandArgs("version", args, { project: { type: "string" } });
+  const projectVal = values.project;
+  const projectPath = typeof projectVal === "string" ? projectVal : undefined;
   const target = resolveTargetDir(projectPath);
   const versionFile = join(target, ".claude", ".dev-pipe-version");
 

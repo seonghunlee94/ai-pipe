@@ -14,7 +14,8 @@
   "scripts": {
     "build": "tsc",
     "prepublishOnly": "npm run build",
-    "test": "npm run typecheck && npm run test:unit && npm run test:hooks && npm run test:scripts",
+    "test": "npm run lint && npm run typecheck && npm run test:unit && npm run test:hooks && npm run test:scripts",
+    "lint": "biome check src --error-on-warnings",
     "typecheck": "tsc --noEmit && tsc -p tsconfig.test.json",
     "test:unit": "vitest run",
     "test:hooks": "bash test/hooks/run.sh",
@@ -24,6 +25,7 @@
     "node": ">=20"
   },
   "devDependencies": {
+    "@biomejs/biome": "^2.4.16",
     "@types/node": "^20.11.0",
     "typescript": "^5.4.0",
     "vitest": "^2.1.9"

@@ -59,7 +59,7 @@ function configPaths(dir: string | undefined): { base: string; local: string } {
 // Reject prototype-pollution segments and inherited-key traversal.
 const FORBIDDEN_SEGMENTS = new Set(["__proto__", "constructor", "prototype"]);
 function hasOwn(o: Record<string, unknown>, k: string): boolean {
-  return Object.prototype.hasOwnProperty.call(o, k);
+  return  Object.hasOwn(o, k);
 }
 
 function getPath(obj: Record<string, unknown>, dotKey: string): unknown {
@@ -101,7 +101,7 @@ export async function runPipeline(args: string[]): Promise<void> {
       throw new AiPipeError("E_BAD_USAGE", `pipeline: no config at ${base} (run \`ai-pipe init\` first)`, 2);
     }
     const merged = deepMerge(readJson(base), readJson(local));
-    process.stdout.write(JSON.stringify(merged, null, 2) + "\n");
+    process.stdout.write(`${JSON.stringify(merged, null, 2)}\n`);
     return;
   }
 
@@ -112,7 +112,7 @@ export async function runPipeline(args: string[]): Promise<void> {
     const merged = deepMerge(readJson(base), readJson(local));
     const val = getPath(merged, key);
     if (val === undefined) throw new AiPipeError("E_BAD_USAGE", `pipeline: key not found: ${key}`, 2);
-    process.stdout.write((typeof val === "string" ? val : JSON.stringify(val)) + "\n");
+    process.stdout.write(`${typeof val === "string" ? val : JSON.stringify(val)}\n`);
     return;
   }
 
@@ -133,7 +133,7 @@ export async function runPipeline(args: string[]): Promise<void> {
     const localCfg = readJson(local);
     setPath(localCfg, key, value);
     mkdirSync(dirname(local), { recursive: true });
-    writeFileSync(local, JSON.stringify(localCfg, null, 2) + "\n", "utf8");
+    writeFileSync(local, `${JSON.stringify(localCfg, null, 2)}\n`, "utf8");
     process.stdout.write(`pipeline: set ${key} in ${local}\n`);
     return;
   }

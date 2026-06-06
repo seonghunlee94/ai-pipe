@@ -13,7 +13,7 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 
 import { AiPipeError } from "./errors.js";
-import { errMsg, resolveTargetDir } from "./utils.js";
+import { errMsg, parseCommandArgs, resolveTargetDir } from "./utils.js";
 
 // Pull `- **org**: <value>` out of project-settings.md, ignoring the
 // {{ORG}} placeholder of a freshly-initialized (unfilled) install.
@@ -25,7 +25,8 @@ export function parseOrg(settingsMd: string): string | null {
 }
 
 export async function runDetect(args: string[]): Promise<void> {
-  const target = resolveTargetDir(args.find((a) => !a.startsWith("-")));
+  const { positionals } = parseCommandArgs("detect", args, {});
+  const target = resolveTargetDir(positionals[0]);
   const settingsPath = join(target, ".claude", "rules", "project-settings.md");
   if (!existsSync(settingsPath)) {
     throw new AiPipeError("E_BAD_USAGE", `detect: no project-settings.md at ${settingsPath} (run \`ai-pipe init\` first)`, 2);

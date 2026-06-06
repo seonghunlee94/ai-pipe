@@ -2,24 +2,35 @@ import { createHash } from "node:crypto";
 import { readFileSync, existsSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, resolve, join } from "node:path";
+import { parseArgs } from "node:util";
 
 import { AiPipeError } from "./errors.js";
+
+// Unified CLI arg parsing on node:util's parseArgs (stdlib — keeps the
+// zero-runtime-dep posture). strict:true makes a mistyped flag a LOUD
+// E_BAD_USAGE instead of a silently-ignored token — the bug class that once
+// ate `upgrade --version`'s directory. Note: `pipeline` deliberately does NOT
+// use this (it takes values that may start with `-`, e.g. negative numbers,
+// which an option parser would reject; see pipeline/commands.ts).
+export type FlagSpec = Record<string, { type: "boolean" | "string" }>;
+
+export function parseCommandArgs(
+  cmd: string,
+  args: string[],
+  options: FlagSpec,
+): { values: Record<string, string | boolean | undefined>; positionals: string[] } {
+  try {
+    const { values, positionals } = parseArgs({ args, options, allowPositionals: true, strict: true });
+    return { values: values as Record<string, string | boolean | undefined>, positionals };
+  } catch (e) {
+    throw new AiPipeError("E_BAD_USAGE", `${cmd}: ${errMsg(e)}`, 2);
+  }
+}
 
 // Narrow an unknown thrown value to a message string, matching the repo's
 // instanceof-narrowing convention (cli.ts/utils.ts) rather than `as Error` casts.
 export function errMsg(e: unknown): string {
   return e instanceof Error ? e.message : String(e);
-}
-
-// Spec §2: read CLI options without external libraries.
-export function readOptionValue(args: string[], flag: string): string | undefined {
-  const idx = args.indexOf(flag);
-  if (idx === -1) return undefined;
-  return args[idx + 1];
-}
-
-export function hasFlag(args: string[], flag: string): boolean {
-  return args.includes(flag);
 }
 
 // Spec §9.2: SHA256 hash for file change detection (timestamps are unreliable).

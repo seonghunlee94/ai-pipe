@@ -6,7 +6,7 @@
 // a forward-compatible no-op: it reports "no migrations" and exits 0 rather than
 // throwing, so scripts/CI can call it unconditionally.
 
-import { resolveTargetDir } from "../utils.js";
+import { parseCommandArgs, resolveTargetDir } from "../utils.js";
 
 export interface Migration {
   readonly id: string;
@@ -19,7 +19,8 @@ export interface Migration {
 export const MIGRATIONS: readonly Migration[] = [];
 
 export async function runMigrate(args: string[]): Promise<void> {
-  const target = resolveTargetDir(args.find((a) => !a.startsWith("-")));
+  const { positionals } = parseCommandArgs("migrate", args, {});
+  const target = resolveTargetDir(positionals[0]);
   if (MIGRATIONS.length === 0) {
     process.stdout.write("migrate: no migrations defined for this version — nothing to do\n");
     return;

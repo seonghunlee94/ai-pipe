@@ -4,7 +4,6 @@ import { join } from "node:path";
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { AiPipeError } from "./errors.js";
 import { checkMetrics, loadEvalCase, runEval, type Metric } from "./eval.js";
 
 let dir: string;

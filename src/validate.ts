@@ -20,7 +20,7 @@ import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { basename, dirname, join, relative, sep } from "node:path";
 
 import { AiPipeError } from "./errors.js";
-import { errMsg, hasFlag, resolveTargetDir } from "./utils.js";
+import { errMsg, parseCommandArgs, resolveTargetDir } from "./utils.js";
 
 export type ProblemLevel = "error" | "warn";
 
@@ -220,7 +220,10 @@ export function validateTree(root: string, opts: ValidateOptions = {}): Problem[
 }
 
 export async function runValidate(args: string[]): Promise<void> {
-  const positionals = args.filter((a) => !a.startsWith("-"));
+  const { values, positionals } = parseCommandArgs("validate", args, {
+    strict: { type: "boolean" },
+    quiet: { type: "boolean" },
+  });
   if (positionals.length > 1) {
     throw new AiPipeError("E_BAD_USAGE", `validate: expected at most one directory, got ${positionals.length}`, 2);
   }
@@ -231,8 +234,8 @@ export async function runValidate(args: string[]): Promise<void> {
   if (!statSync(dir).isDirectory()) {
     throw new AiPipeError("E_BAD_USAGE", `validate: not a directory: ${dir}`, 2);
   }
-  const strict = hasFlag(args, "--strict");
-  const quiet = hasFlag(args, "--quiet");
+  const strict = values.strict === true;
+  const quiet = values.quiet === true;
 
   const problems = validateTree(dir);
   const errors = problems.filter((p) => p.level === "error");
@@ -247,7 +250,7 @@ export async function runValidate(args: string[]): Promise<void> {
   }
 
   const summary =
-    `validate: ${errors.length} error(s), ${warns.length} warning(s)` + (strict ? " (strict)" : "");
+    `validate: ${errors.length} error(s), ${warns.length} warning(s)${strict ? " (strict)" : ""}`;
   const failCount = strict ? errors.length + warns.length : errors.length;
   if (failCount > 0) {
     throw new AiPipeError("E_VALIDATION", summary, 1);

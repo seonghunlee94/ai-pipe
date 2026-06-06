@@ -27,7 +27,7 @@ import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { join, resolve } from "node:path";
 
 import { AiPipeError } from "./errors.js";
-import { errMsg, hasFlag } from "./utils.js";
+import { errMsg, parseCommandArgs } from "./utils.js";
 
 export interface Metric {
   readonly req_ids_min?: number;
@@ -68,7 +68,7 @@ const METRICS: Record<string, MetricDef> = {
     validate: (v) => (typeof v === "number" && Number.isInteger(v) && v >= 0 ? null : "must be an integer >= 0"),
     check: (o, v) => {
       const min = v as number;
-      const ids = o["req_ids"];
+      const ids = o.req_ids;
       const count = Array.isArray(ids) ? ids.length : 0;
       return { pass: count >= min, detail: `req_ids count ${count} ${count >= min ? ">=" : "<"} ${min}` };
     },
@@ -77,7 +77,7 @@ const METRICS: Record<string, MetricDef> = {
     validate: (v) => (typeof v === "boolean" ? null : "must be a boolean"),
     check: (o, v, baseDir) => {
       const want = v as boolean;
-      const sp = o["spec_path"];
+      const sp = o.spec_path;
       const exists = typeof sp === "string" && existsSync(resolve(baseDir, sp));
       return {
         pass: exists === want,
@@ -89,7 +89,7 @@ const METRICS: Record<string, MetricDef> = {
     validate: (v) => (typeof v === "boolean" ? null : "must be a boolean"),
     check: (o, v) => {
       const want = v as boolean;
-      const notNull = isObject(o["downstream_notes"]);
+      const notNull = isObject(o.downstream_notes);
       return { pass: notNull === want, detail: `downstream_notes is ${notNull ? "a non-null object" : "null/absent/non-object"} (want not-null=${want})` };
     },
   },
@@ -100,7 +100,7 @@ const METRICS: Record<string, MetricDef> = {
         : "must be a non-empty array of strings",
     check: (o, v) => {
       const allowed = v as string[];
-      const status = o["status"];
+      const status = o.status;
       const ok = typeof status === "string" && allowed.includes(status);
       return { pass: ok, detail: `status ${JSON.stringify(status)} in ${JSON.stringify(allowed)}` };
     },
@@ -189,31 +189,10 @@ function discoverCases(dir: string): string[] {
 }
 
 export async function runEval(args: string[]): Promise<void> {
-  // --outputs <dir> | --outputs=<dir>: require a real value (a mistyped flag
-  // must not silently downgrade a regression gate to "validate-only, pass").
-  let outputsDir: string | undefined;
-  const oi = args.findIndex((a) => a === "--outputs" || a.startsWith("--outputs="));
-  if (oi !== -1) {
-    const tok = args[oi] ?? "";
-    const val = tok.startsWith("--outputs=") ? tok.slice("--outputs=".length) : args[oi + 1];
-    if (val === undefined || val === "" || val.startsWith("-")) {
-      throw new AiPipeError("E_BAD_USAGE", "eval: --outputs requires a directory", 2);
-    }
-    outputsDir = resolve(process.cwd(), val);
-  }
-
-  // Positionals: skip flags and the --outputs value (space form).
-  const positionals: string[] = [];
-  for (let i = 0; i < args.length; i++) {
-    const a = args[i];
-    if (a === undefined) continue;
-    if (a === "--outputs") {
-      i++; // skip its value
-      continue;
-    }
-    if (a.startsWith("-")) continue;
-    positionals.push(a);
-  }
+  const { values, positionals } = parseCommandArgs("eval", args, {
+    outputs: { type: "string" },
+    verbose: { type: "boolean" },
+  });
   if (positionals.length !== 1) {
     throw new AiPipeError("E_BAD_USAGE", "usage: ai-pipe eval <evalsDir> [--outputs <dir>] [--verbose]", 2);
   }
@@ -221,10 +200,22 @@ export async function runEval(args: string[]): Promise<void> {
   if (!existsSync(dir) || !statSync(dir).isDirectory()) {
     throw new AiPipeError("E_BAD_USAGE", `eval: not a directory: ${dir}`, 2);
   }
-  if (outputsDir !== undefined && (!existsSync(outputsDir) || !statSync(outputsDir).isDirectory())) {
-    throw new AiPipeError("E_BAD_USAGE", `eval: --outputs not a directory: ${outputsDir}`, 2);
+
+  // --outputs needs a REAL directory value — an empty `--outputs=` or a value
+  // that is actually the next flag must not silently downgrade a regression
+  // gate to "validate-only, pass". (parseArgs already throws on a missing value.)
+  let outputsDir: string | undefined;
+  const outputsVal = values.outputs;
+  if (outputsVal !== undefined) {
+    if (typeof outputsVal !== "string" || outputsVal === "" || outputsVal.startsWith("-")) {
+      throw new AiPipeError("E_BAD_USAGE", "eval: --outputs requires a directory", 2);
+    }
+    outputsDir = resolve(process.cwd(), outputsVal);
+    if (!existsSync(outputsDir) || !statSync(outputsDir).isDirectory()) {
+      throw new AiPipeError("E_BAD_USAGE", `eval: --outputs not a directory: ${outputsDir}`, 2);
+    }
   }
-  const verbose = hasFlag(args, "--verbose");
+  const verbose = values.verbose === true;
 
   const files = discoverCases(dir);
   if (files.length === 0) {

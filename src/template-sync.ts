@@ -30,7 +30,7 @@ export interface FileChange {
 export function isLocallyOwnedPath(rel: string): boolean {
   if (LOCAL_FILES.includes(rel)) return true;
   for (const d of LOCAL_DIRS) {
-    if (rel === d || rel.startsWith(d + "/")) return true;
+    if (rel === d || rel.startsWith(`${d}/`)) return true;
   }
   return false;
 }

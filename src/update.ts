@@ -12,12 +12,13 @@ import { copyFileSync, mkdirSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 
 import { requireInstall, scanTemplate, STATUS_GLYPH } from "./template-sync.js";
-import { hasFlag, readPackageInfo, resolveTargetDir, templateDir } from "./utils.js";
+import { parseCommandArgs, readPackageInfo, resolveTargetDir, templateDir } from "./utils.js";
 
 export async function runUpdate(args: string[]): Promise<void> {
-  const target = resolveTargetDir(args.find((a) => !a.startsWith("-")));
+  const { values, positionals } = parseCommandArgs("update", args, { force: { type: "boolean" } });
+  const target = resolveTargetDir(positionals[0]);
   const claude = requireInstall(target, "update");
-  const force = hasFlag(args, "--force");
+  const force = values.force === true;
 
   const changes = scanTemplate(claude);
   const toApply = changes.filter((c) => c.status === "new" || c.status === "changed");

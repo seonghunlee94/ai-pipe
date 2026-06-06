@@ -93,5 +93,20 @@ STDIN="--- FAIL: TestFoo (0.01s)" \
 STDIN=$'FAIL\texample.com/pkg\t0.123s' \
   check "classify: go FAIL tab"  1 '"TEST_FAIL"'        -- bash "$K"
 
+# ---------- §8 taxonomy sync (N16) ----------
+# The classifier hardcodes the common-agent-rules §8 categories and its header
+# demands "keep the two in sync" — assert it BOTH ways so adding/renaming a
+# category in either place fails here instead of drifting silently.
+SKILL="$REPO_ROOT/plugins/ai-pipe-core/skills/common-agent-rules/SKILL.md"
+SKILL_CATS=$(sed -n '/^## 8/,/^## 9/p' "$SKILL" | grep -oE '`[A-Z][A-Z_]{3,}`' | tr -d '\`' | sort -u)
+EMIT_CATS=$(grep -oE 'emit [A-Z][A-Z_]{3,}' "$K" | awk '{print $2}' | grep -v '^UNKNOWN$' | sort -u)
+if [[ -n "$SKILL_CATS" && "$SKILL_CATS" == "$EMIT_CATS" ]]; then
+  PASS=$((PASS + 1))
+else
+  FAIL=$((FAIL + 1))
+  printf 'FAIL  taxonomy sync: §8 categories != classifier emits\n  §8:    %s\n  emits: %s\n' \
+    "$(tr '\n' ' ' <<<"$SKILL_CATS")" "$(tr '\n' ' ' <<<"$EMIT_CATS")"
+fi
+
 echo "── script harness: $PASS passed, $FAIL failed ──"
 [[ "$FAIL" == 0 ]]

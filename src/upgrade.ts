@@ -11,44 +11,24 @@
 import { execFileSync } from "node:child_process";
 
 import { AiPipeError } from "./errors.js";
-import { errMsg, readOptionValue, readPackageInfo, resolveTargetDir } from "./utils.js";
+import { errMsg, parseCommandArgs, readPackageInfo, resolveTargetDir } from "./utils.js";
 
 export async function runUpgrade(args: string[]): Promise<void> {
   const pkg = readPackageInfo();
-  // Accept both `--version X` (space) and `--version=X` (equals) — the equals
-  // form was previously silently ignored, installing @latest instead of the
-  // requested version (a surprising global side effect). A bare `--version`
-  // with no usable value is rejected the same way (no silent @latest).
+  // parseArgs handles both `--version X` and `--version=X` natively and throws
+  // on a missing value. An empty `--version=` or a flag-eaten value is still
+  // rejected here — a silent @latest install would be a surprising global
+  // side effect.
+  const { values, positionals } = parseCommandArgs("upgrade", args, { version: { type: "string" } });
   let version = "latest";
-  if (args.includes("--version")) {
-    const val = readOptionValue(args, "--version");
-    if (val === undefined || val.startsWith("-")) {
+  const v = values.version;
+  if (v !== undefined) {
+    if (typeof v !== "string" || v === "" || v.startsWith("-")) {
       throw new AiPipeError("E_BAD_USAGE", "upgrade: --version requires a value", 2);
     }
-    version = val;
-  }
-  const eqTok = args.find((a) => a.startsWith("--version="));
-  if (eqTok !== undefined) {
-    const val = eqTok.slice("--version=".length);
-    if (val === "") {
-      throw new AiPipeError("E_BAD_USAGE", "upgrade: --version= requires a value", 2);
-    }
-    version = val;
+    version = v;
   }
   const spec = `${pkg.name}@${version}`;
-  // Positional dir = first non-flag arg, skipping the --version VALUE (so
-  // `upgrade --version 1.2.3 /proj` resolves /proj, not 1.2.3).
-  const positionals: string[] = [];
-  for (let i = 0; i < args.length; i++) {
-    const a = args[i];
-    if (a === undefined) continue;
-    if (a === "--version") {
-      i++; // skip its value
-      continue;
-    }
-    if (a.startsWith("-")) continue;
-    positionals.push(a);
-  }
   const target = resolveTargetDir(positionals[0]);
 
   process.stdout.write(`upgrade: npm install -g ${spec}\n`);

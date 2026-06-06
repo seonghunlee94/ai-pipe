@@ -1,4 +1,4 @@
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -112,7 +112,7 @@ describe("runPipeline", () => {
   it("blocks prototype-pollution segments (set throws, get returns not-found, proto intact)", async () => {
     configDir();
     await expect(runPipeline(["set", "__proto__.polluted", "true", dir])).rejects.toMatchObject({ code: "E_BAD_USAGE" });
-    expect(({} as Record<string, unknown>)["polluted"]).toBeUndefined();
+    expect(({} as Record<string, unknown>).polluted).toBeUndefined();
     await expect(runPipeline(["get", "__proto__", dir])).rejects.toMatchObject({ code: "E_BAD_USAGE" });
     await expect(runPipeline(["get", "constructor", dir])).rejects.toMatchObject({ code: "E_BAD_USAGE" });
   });
@@ -178,18 +178,18 @@ describe("deepMerge prototype safety", () => {
     // Without the FORBIDDEN_SEGMENTS guard, `out["__proto__"] = v` hits the
     // inherited setter and re-points m's prototype → both assertions fail.
     expect(Object.getPrototypeOf(m)).toBe(Object.prototype);
-    expect((m as Record<string, unknown>)["polluted"]).toBeUndefined();
-    expect(({} as Record<string, unknown>)["polluted"]).toBeUndefined(); // global untouched
-    expect((m["limits"] as Record<string, unknown>)["max_retries"]).toBe(9); // override applied
+    expect((m as Record<string, unknown>).polluted).toBeUndefined();
+    expect(({} as Record<string, unknown>).polluted).toBeUndefined(); // global untouched
+    expect((m.limits as Record<string, unknown>).max_retries).toBe(9); // override applied
   });
 
   it("scrubs nested forbidden keys in a one-sided subtree (rebuilt, not carried by reference)", () => {
     const over = JSON.parse('{"a":{"__proto__":{"x":1},"keep":2}}') as Record<string, unknown>;
     const m = deepMerge({}, over);
-    const a = m["a"] as Record<string, unknown>;
+    const a = m.a as Record<string, unknown>;
     expect(Object.getPrototypeOf(a)).toBe(Object.prototype);
-    expect(Object.prototype.hasOwnProperty.call(a, "__proto__")).toBe(false);
-    expect(a["keep"]).toBe(2);
+    expect(Object.hasOwn(a, "__proto__")).toBe(false);
+    expect(a.keep).toBe(2);
   });
 
   it("e2e: pipeline show on a hand-edited local applies the legitimate override", async () => {

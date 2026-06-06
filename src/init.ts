@@ -15,7 +15,7 @@ import {
   LOCAL_DIRS,
   LOCAL_FILES,
 } from "./local-files.js";
-import { hasFlag, readPackageInfo, resolveTargetDir, templateDir } from "./utils.js";
+import { parseCommandArgs, readPackageInfo, resolveTargetDir, templateDir } from "./utils.js";
 import { validateTree } from "./validate.js";
 
 // `ai-pipe init [targetDir] [--force]`
@@ -29,9 +29,9 @@ import { validateTree } from "./validate.js";
 // §8.3); user customizations are preserved.
 
 export async function runInit(args: string[]): Promise<void> {
-  const force = hasFlag(args, "--force");
-  const targetArg = args.find((a) => !a.startsWith("--"));
-  const target = resolveTargetDir(targetArg);
+  const { values, positionals } = parseCommandArgs("init", args, { force: { type: "boolean" } });
+  const force = values.force === true;
+  const target = resolveTargetDir(positionals[0]);
   const targetClaude = join(target, ".claude");
 
   if (!existsSync(target)) {
@@ -88,7 +88,7 @@ function isLocallyOwned(srcPath: string, srcRoot: string, targetRoot: string): b
 
   if (LOCAL_FILES.includes(rel)) return true;
   for (const dir of LOCAL_DIRS) {
-    if (rel === dir || rel.startsWith(dir + "/")) return true;
+    if (rel === dir || rel.startsWith(`${dir}/`)) return true;
   }
   return false;
 }

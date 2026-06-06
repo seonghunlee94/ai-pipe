@@ -73,7 +73,7 @@ async function main(): Promise<void> {
   }
 
   if (cmd === "--version" || cmd === "-v") {
-    process.stdout.write(readPackageInfo().version + "\n");
+    process.stdout.write(`${readPackageInfo().version}\n`);
     return;
   }
 
@@ -90,6 +90,6 @@ main().catch((err: unknown) => {
     process.exit(err.exitCode);
   }
   process.stderr.write(`Unexpected error:\n`);
-  process.stderr.write(err instanceof Error && err.stack ? err.stack + "\n" : String(err) + "\n");
+  process.stderr.write(err instanceof Error && err.stack ? `${err.stack}\n` : `${String(err)}\n`);
   process.exit(1);
 });

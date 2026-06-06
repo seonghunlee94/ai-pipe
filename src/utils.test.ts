@@ -4,7 +4,8 @@ import { join, resolve } from "node:path";
 
 import { afterEach, describe, expect, it } from "vitest";
 
-import { errMsg, fileHash, hasFlag, readOptionValue, resolveTargetDir } from "./utils.js";
+import { AiPipeError } from "./errors.js";
+import { errMsg, fileHash, parseCommandArgs, resolveTargetDir } from "./utils.js";
 
 const tmpDirs: string[] = [];
 function makeTmp(prefix: string): string {
@@ -30,24 +31,32 @@ describe("errMsg", () => {
   });
 });
 
-describe("readOptionValue", () => {
-  it("returns the value following the flag", () => {
-    expect(readOptionValue(["--project", "/tmp/x"], "--project")).toBe("/tmp/x");
+describe("parseCommandArgs", () => {
+  const spec = { force: { type: "boolean" as const }, out: { type: "string" as const } };
+  it("parses booleans, valued flags (space and equals form), and positionals", () => {
+    const a = parseCommandArgs("x", ["--force", "dir"], spec);
+    expect(a.values.force).toBe(true);
+    expect(a.positionals).toEqual(["dir"]);
+    expect(parseCommandArgs("x", ["--out", "v", "dir"], spec).values.out).toBe("v");
+    expect(parseCommandArgs("x", ["--out=v"], spec).values.out).toBe("v");
   });
-  it("returns undefined when the flag is absent", () => {
-    expect(readOptionValue(["--other", "y"], "--project")).toBeUndefined();
+  it("a positional may come before flags", () => {
+    const a = parseCommandArgs("x", ["dir", "--force"], spec);
+    expect(a.positionals).toEqual(["dir"]);
+    expect(a.values.force).toBe(true);
   });
-  it("returns undefined when the flag is last with no value", () => {
-    expect(readOptionValue(["--project"], "--project")).toBeUndefined();
+  it("throws E_BAD_USAGE (with the command prefix) on an unknown flag", () => {
+    try {
+      parseCommandArgs("mycmd", ["--typo"], spec);
+      expect.unreachable("should have thrown");
+    } catch (e) {
+      expect(e).toBeInstanceOf(AiPipeError);
+      expect((e as AiPipeError).code).toBe("E_BAD_USAGE");
+      expect((e as AiPipeError).message).toMatch(/^mycmd:/);
+    }
   });
-});
-
-describe("hasFlag", () => {
-  it("detects a present flag", () => {
-    expect(hasFlag(["--force"], "--force")).toBe(true);
-  });
-  it("is false when absent", () => {
-    expect(hasFlag(["--other"], "--force")).toBe(false);
+  it("throws E_BAD_USAGE when a valued flag is missing its value", () => {
+    expect(() => parseCommandArgs("x", ["--out"], spec)).toThrow(AiPipeError);
   });
 });
 
