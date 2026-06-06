@@ -8,7 +8,7 @@ import { parseOrg } from "./detect.js";
 import { runDiff } from "./diff.js";
 import { runInit } from "./init.js";
 import { runMigrate } from "./conventions/migrate.js";
-import { runPipeline } from "./pipeline/commands.js";
+import { deepMerge, runPipeline } from "./pipeline/commands.js";
 import { preflightChecks } from "./preflight.js";
 import { scanTemplate } from "./template-sync.js";
 import { runUpdate } from "./update.js";
@@ -170,20 +170,38 @@ describe("runDiff", () => {
   });
 });
 
-describe("deepMerge prototype safety (via pipeline show/get on a hand-edited local)", () => {
-  it("an own __proto__ key in pipeline.local.json is dropped, never re-points prototypes", async () => {
+describe("deepMerge prototype safety", () => {
+  it("drops an own __proto__ key without re-pointing the merged object's prototype (live-object assertions — would fail if the guard were removed)", () => {
+    // JSON.parse creates __proto__ as a plain OWN property, never the setter.
+    const over = JSON.parse('{"__proto__":{"polluted":true},"limits":{"max_retries":9}}') as Record<string, unknown>;
+    const m = deepMerge({ limits: { max_retries: 3 } }, over);
+    // Without the FORBIDDEN_SEGMENTS guard, `out["__proto__"] = v` hits the
+    // inherited setter and re-points m's prototype → both assertions fail.
+    expect(Object.getPrototypeOf(m)).toBe(Object.prototype);
+    expect((m as Record<string, unknown>)["polluted"]).toBeUndefined();
+    expect(({} as Record<string, unknown>)["polluted"]).toBeUndefined(); // global untouched
+    expect((m["limits"] as Record<string, unknown>)["max_retries"]).toBe(9); // override applied
+  });
+
+  it("scrubs nested forbidden keys in a one-sided subtree (rebuilt, not carried by reference)", () => {
+    const over = JSON.parse('{"a":{"__proto__":{"x":1},"keep":2}}') as Record<string, unknown>;
+    const m = deepMerge({}, over);
+    const a = m["a"] as Record<string, unknown>;
+    expect(Object.getPrototypeOf(a)).toBe(Object.prototype);
+    expect(Object.prototype.hasOwnProperty.call(a, "__proto__")).toBe(false);
+    expect(a["keep"]).toBe(2);
+  });
+
+  it("e2e: pipeline show on a hand-edited local applies the legitimate override", async () => {
     const cfg = join(dir, ".claude", "config");
     mkdirSync(cfg, { recursive: true });
     writeFileSync(join(cfg, "pipeline.json"), JSON.stringify({ limits: { max_retries: 3 } }));
-    // JSON.parse creates __proto__ as a plain OWN property; the merge must skip it.
     writeFileSync(join(cfg, "pipeline.local.json"), '{"__proto__":{"polluted":true},"limits":{"max_retries":9}}');
     const writes: string[] = [];
     vi.spyOn(process.stdout, "write").mockImplementation((s) => (writes.push(String(s)), true));
     await runPipeline(["show", dir]);
-    expect(({} as Record<string, unknown>)["polluted"]).toBeUndefined();
     const merged = JSON.parse(writes.join(""));
-    expect(merged.limits.max_retries).toBe(9); // override still applied
-    expect(Object.prototype.hasOwnProperty.call(merged, "__proto__")).toBe(false);
+    expect(merged.limits.max_retries).toBe(9);
   });
 });
 

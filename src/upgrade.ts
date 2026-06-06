@@ -17,8 +17,16 @@ export async function runUpgrade(args: string[]): Promise<void> {
   const pkg = readPackageInfo();
   // Accept both `--version X` (space) and `--version=X` (equals) — the equals
   // form was previously silently ignored, installing @latest instead of the
-  // requested version (a surprising global side effect).
-  let version = readOptionValue(args, "--version") ?? "latest";
+  // requested version (a surprising global side effect). A bare `--version`
+  // with no usable value is rejected the same way (no silent @latest).
+  let version = "latest";
+  if (args.includes("--version")) {
+    const val = readOptionValue(args, "--version");
+    if (val === undefined || val.startsWith("-")) {
+      throw new AiPipeError("E_BAD_USAGE", "upgrade: --version requires a value", 2);
+    }
+    version = val;
+  }
   const eqTok = args.find((a) => a.startsWith("--version="));
   if (eqTok !== undefined) {
     const val = eqTok.slice("--version=".length);

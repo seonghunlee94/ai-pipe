@@ -36,14 +36,16 @@ function readJson(file: string): Record<string, unknown> {
 // (JSON.parse creates it as a plain own property, never the setter), and
 // blindly assigning it onto a normal object would re-point that object's
 // prototype — same guard discipline as getPath/setPath below.
-function deepMerge(base: Record<string, unknown>, over: Record<string, unknown>): Record<string, unknown> {
+export function deepMerge(base: Record<string, unknown>, over: Record<string, unknown>): Record<string, unknown> {
   const out: Record<string, unknown> = {};
   for (const src of [base, over]) {
     for (const k of Object.keys(src)) {
       if (FORBIDDEN_SEGMENTS.has(k)) continue;
       const v = src[k];
       const cur = out[k];
-      out[k] = isObject(cur) && isObject(v) ? deepMerge(cur, v) : v;
+      // A subtree present on only one side is still rebuilt via deepMerge({}, v)
+      // so nested forbidden keys are scrubbed recursively, not carried by reference.
+      out[k] = isObject(cur) && isObject(v) ? deepMerge(cur, v) : isObject(v) ? deepMerge({}, v) : v;
     }
   }
   return out;
