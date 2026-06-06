@@ -37,6 +37,13 @@ export interface ValidateOptions {
   readonly placeholders?: boolean;
 }
 
+// The placeholder the README §0 sed sweep replaces. Built from parts ON
+// PURPOSE: the sweep rewrites every literal in *.ts, and if it could rewrite
+// this DETECTOR too, the user's real org would become a permanent false
+// positive and checklist step 2 ("strict validate shows 0 warnings") would be
+// unpassable. Do not join into a single literal.
+const ORG_PLACEHOLDER = "your-" + "org/";
+
 // Build/VCS/runtime-artifact directories that never contain source to validate.
 const SKIP_DIRS = new Set([
   "node_modules",
@@ -169,11 +176,11 @@ export function validateTree(root: string, opts: ValidateOptions = {}): Problem[
       // Templates legitimately carry the placeholder; only flag real config.
       // Match `your-org/` (npm scope `@your-org/`, github `your-org/`) so a real
       // org like `your-organization` is not a false positive.
-      if (!underTemplate && raw.includes("your-org/")) {
+      if (!underTemplate && raw.includes(ORG_PLACEHOLDER)) {
         problems.push({
           level: "warn",
           file: rel,
-          message: "contains 'your-org/' placeholder — run the README §0 sed sweep before publishing",
+          message: `contains '${ORG_PLACEHOLDER}' placeholder — run the README §0 sed sweep before publishing`,
         });
       }
     } else if (file.endsWith(".sh")) {

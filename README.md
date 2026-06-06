@@ -26,6 +26,8 @@ grep -rl 'your-org' . --include='*.json' --include='*.md' --include='*.ts' --inc
 
 대상 파일: `package.json`, `package-lock.json`, `.npmrc`, `README.md`, `.claude-plugin/marketplace.json`, `plugins/ai-pipe-core/plugin.json`, `plugins/ai-pipe-core/shared/schemas/*.json` ($id), `plugins/ai-pipe-core/shared/evals/*.schema.json` ($id), `src/init.ts` (안내 출력), `src/versions.ts` (주석). 치환 후 `npm run build`로 dist 재생성 필요. (`.github/workflows/publish.yml`은 org 무관 — GITHUB_TOKEN 기반.)
 
+> **주의**: `src/validate.ts` 의 placeholder **탐지기**와 `src/validate.test.ts` 의 픽스처는 리터럴을 분리(`"your-" + "org/"`)해 두어 이 스윕이 건드리지 못한다 — 탐지기가 함께 치환되면 사용자의 실제 org 가 영구 오탐이 되고 아래 체크리스트 2단계가 통과 불가능해진다. 단일 리터럴로 합치지 말 것.
+
 ### 퍼블리시 체크리스트 (공개/배포 시점에 순서대로)
 
 1. **라이선스 결정** — 현재 `UNLICENSED`(private, 의도된 상태). 공개 전 라이선스(MIT/Apache-2.0 등)를 **사용자가 직접 선택**해 `LICENSE` 파일 추가 + `package.json` `license` 갱신 (§7).

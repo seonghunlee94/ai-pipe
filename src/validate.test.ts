@@ -80,9 +80,12 @@ describe("validateTree", () => {
     expect(errs.some((m) => m.includes("notahook.sh"))).toBe(false);
   });
 
-  it("warns on a leftover your-org/ placeholder but not on a real org name", () => {
-    write("pub.json", '{"repo":"github.com/your-org/x"}');
-    write("ok.json", '{"repo":"your-organization-name"}');
+  it("warns on a leftover org placeholder but not on a real org name", () => {
+    // Fixtures built from parts so the README §0 sed sweep can't rewrite them
+    // (same sweep-proofing as ORG_PLACEHOLDER in validate.ts — a rewritten
+    // fixture would keep the test green while the detector was broken).
+    write("pub.json", `{"repo":"github.com/${"your-" + "org"}/x"}`);
+    write("ok.json", `{"repo":"${"your-" + "organization"}-name"}`);
     const warns = messages(validateTree(root), "warn");
     expect(warns.some((m) => m.startsWith("pub.json"))).toBe(true);
     expect(warns.some((m) => m.startsWith("ok.json"))).toBe(false);
