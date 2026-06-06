@@ -5,6 +5,7 @@ import { runMigrate } from "./conventions/migrate.js";
 import { runDetect } from "./detect.js";
 import { runDiff } from "./diff.js";
 import { AiPipeError } from "./errors.js";
+import { runEval } from "./eval.js";
 import { runInit } from "./init.js";
 import { runPipeline } from "./pipeline/commands.js";
 import { runPreflight } from "./preflight.js";
@@ -27,6 +28,9 @@ Commands:
   validate [<dir>] [--strict] [--quiet]
                                 Check a tree: JSON parses, hooks pass bash -n,
                                 agent/skill frontmatter, filled placeholders
+  eval <evalsDir> [--outputs <dir>] [--verbose]
+                                Validate *.eval.json cases; with --outputs,
+                                score recorded agent outputs against metrics
   --version, -v                 Print CLI version
   --help, -h                    Show this help
 
@@ -49,6 +53,7 @@ const COMMANDS: Record<string, (args: string[]) => Promise<void>> = {
   preflight: runPreflight,
   detect: runDetect,
   validate: runValidate,
+  eval: runEval,
   versions: runVersions,
   pipeline: runPipeline,
   migrate: runMigrate,

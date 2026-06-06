@@ -64,7 +64,7 @@ prompt 변경이 품질을 떨어뜨리지 않았는지 회귀 검사한다. 시
   "req_ids_min":3, "spec_path_exists":true, "downstream_notes_not_null":true}}
 ```
 
-PR6 는 시드(스키마 + 1 케이스)만 제공한다. 실행 러너(`ai-pipe eval`)는 후속 작업.
+러너 `ai-pipe eval <evalsDir>` 는 케이스를 발견·구조 검증하고, `--outputs <dir>` 가 주어지면 각 케이스를 `<dir>/<name>.json`(기록된 에이전트 출력)에 대해 채점한다 (메트릭 통과 수 / 실패 시 exit 1). CLI 는 LLM 을 호출하지 않으므로 **에이전트 출력 생성은 Claude Code 단계**, eval 은 그 결과를 결정적으로 채점하는 회귀 게이트다.
 
 ## 5. Checkpoint / resume (spec §12.3)
 
