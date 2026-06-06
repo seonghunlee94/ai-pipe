@@ -14,14 +14,18 @@
   "scripts": {
     "build": "tsc",
     "prepublishOnly": "npm run build",
-    "test": "echo \"no tests yet — see spec §2 (Vitest planned)\" && exit 0"
+    "test": "npm run typecheck && npm run test:unit && npm run test:hooks",
+    "typecheck": "tsc --noEmit && tsc -p tsconfig.test.json",
+    "test:unit": "vitest run",
+    "test:hooks": "bash test/hooks/run.sh"
   },
   "engines": {
     "node": ">=20"
   },
   "devDependencies": {
+    "@types/node": "^20.11.0",
     "typescript": "^5.4.0",
-    "@types/node": "^20.11.0"
+    "vitest": "^2.1.9"
   },
   "publishConfig": {
     "registry": "https://npm.pkg.github.com",

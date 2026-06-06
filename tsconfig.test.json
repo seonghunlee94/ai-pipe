@@ -1,0 +1,9 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noEmit": true
+  },
+  "$comment": "Typechecks src + *.test.ts. The base config excludes **/*.test.ts; this redefines `exclude` (TS only overrides a base key when the derived config restates it) so the test files are actually checked. vitest.config.ts is runtime-only — its `extensionAlias` is valid at runtime but absent from the bundled types — so it is not included here.",
+  "include": ["src/**/*.ts"],
+  "exclude": ["node_modules", "dist", "template"]
+}

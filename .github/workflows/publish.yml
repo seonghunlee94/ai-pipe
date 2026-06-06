@@ -21,8 +21,7 @@ jobs:
 
       - run: npm ci
       - run: npm run build
-      # TODO: enable when tests exist (spec §2 — Vitest planned)
-      # - run: npm test
+      - run: npm test
 
       - run: npm publish
         env:

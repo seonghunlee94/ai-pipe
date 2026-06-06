@@ -140,9 +140,13 @@ MCP 연결이 없어도 project-ops 는 gh CLI 로 동작한다 (기능 동일, 
 | `validate [<dir>] [--strict] [--quiet]` (JSON 파싱 / hook `bash -n` / agent·skill frontmatter[구조 검사 — name·description 존재] / placeholder / your-org) | working |
 | `update`, `upgrade`, `diff`, `preflight`, `detect`, `versions`, `pipeline`, `migrate` | stub |
 
-### 훅 검증
+### 테스트 (DEV2)
 
-8개 훅 모두 `bash -n` 통과 + 정상/위반 케이스 동작 확인. PreToolUse 차단 훅 6종(verify-boundary, verify-git-safety, validate-commit-msg, ban-background, validate-subagent-type, secrets-scan)은 Claude Code 규약(2 = block)을 따르고, lifecycle 훅 2종(session-start, stop-checkpoint)은 best-effort 로 항상 exit 0 (세션을 막지 않음).
+`npm test` = `typecheck`(tsc src+tests; `tsconfig.test.json` 이 base 의 `**/*.test.ts` 제외를 재정의해 테스트도 검사) + `vitest run`(utils/version/validate/init 단위 33케이스) + 훅 하네스(`test/hooks/run.sh`, PreToolUse 6종 44케이스 — exit code + stderr 사유까지 검증). CI(`.github/workflows/ci.yml`)가 push/PR 마다 build+test 를 돌리고, publish workflow 도 `npm test` 게이트를 통과해야 배포한다.
+
+PreToolUse 차단 훅 6종(verify-boundary, verify-git-safety, validate-commit-msg, ban-background, validate-subagent-type, secrets-scan)은 Claude Code 규약(2 = block)을 따르고, lifecycle 훅 2종(session-start, stop-checkpoint)은 best-effort 로 항상 exit 0 (세션을 막지 않음). 하네스는 각 차단 훅의 block/allow 케이스를 jq 페이로드로 검증한다.
+
+테스트 백로그(향후): vitest coverage threshold, linter(ESLint/Biome) + CI lint, CI Node 매트릭스(20/22), validate EACCES/symlink 가드 테스트. (DEV-NICE 단계에서 판단 후 진행)
 
 ---
 
