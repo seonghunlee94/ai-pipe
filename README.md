@@ -161,7 +161,7 @@ PreToolUse 차단 훅 6종(verify-boundary, verify-git-safety, validate-commit-m
 
 - 산출물은 `.artifacts/`(specs/plans/runs) 아래에 떨어진다. 실행 이벤트는 `.artifacts/runs/{slug}-events.jsonl`, 진행/비용은 `${CLAUDE_PLUGIN_DIR}/bin/adp-watch {slug}`.
 - 로컬 단독(GitHub 미연동) 실행은 `config/pipeline.json` 의 `local_defaults`(story/issue=1)로 impl-agent-input 을 채운다. GitHub Issues/Projects 연동은 project-ops 에이전트가 담당.
-- impl 에이전트 3종(backend/frontend/infra-eng)이 모두 정의됨 — plan 의 task 가 어느 레이어든 execute-plan 이 fan-out 한다. 검증 단계는 qa→test-*→reviewer→verifier(ship/no-ship) 에이전트가 담당.
+- impl 에이전트 3종(backend/frontend/infra-eng)이 모두 정의됨 — plan 의 task 가 어느 레이어든 execute-plan 이 fan-out 한다. 검증 단계는 qa→test-*→reviewer→verifier(ship/no-ship) 에이전트가 담당하나, 이를 묶는 오케스트레이터 skill 은 아직 없다(현재는 수동 호출; `verify` skill 은 백로그).
 
 ---
 

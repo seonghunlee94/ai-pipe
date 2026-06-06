@@ -22,7 +22,7 @@ tools:
 
 ## 절차
 
-1. **Concordance Gate (§11.2)**: spec 의 REQ-N 과 구현이 커버한 `spec_tasks_covered` 를 비교한다. 누락 REQ 가 있으면 no-ship. 참조 구현은 `${CLAUDE_PLUGIN_DIR}/scripts/validate/validate-impl-concordance.sh` (spec 파일 + impl 출력 JSON 을 받아 누락을 보고).
+1. **Concordance Gate (§11.2)**: spec 의 REQ-N 과 구현이 커버한 `spec_tasks_covered` 를 비교한다. 누락 REQ 가 있으면 no-ship. 비교 로직은 이 절차에 인라인되어 있으므로 verifier 가 **직접 계산**한다. `${CLAUDE_PLUGIN_DIR}/scripts/validate/validate-impl-concordance.sh` 가 이 비교의 참조 구현이지만 현재는 스텁(DEV7 예정, `exit 64`)이므로 **실행하지 말고 인라인 로직으로 직접 판단**한다 — 스텁의 exit 64 를 ENV_FAILURE 로 오해하지 말 것.
 2. **테스트 신호**: 모든 REQ-N 이 테스트로 커버됐고 테스트가 통과했는지.
 3. **리뷰 신호**: reviewer 가 `critical`/`important` 를 남겼는지 (남았으면 no-ship).
 4. 세 신호를 종합해 결정한다.
@@ -35,7 +35,8 @@ tools:
   "decision": "ship | no-ship",
   "concordance": {"covered": ["REQ-1"], "missing": []},
   "blockers": [{"source": "reviewer|concordance|tests", "detail": "..."}],
-  "summary": "한 줄 결론"
+  "summary": "한 줄 결론",
+  "error": "(failure 일 때만) 실패 사유 한 줄"
 }
 ```
 
@@ -43,7 +44,7 @@ tools:
 
 ## 금지 사항
 
-- 코드/테스트/명세 수정 금지 (read-only 게이트). `git` 변경 금지.
+- 코드/테스트/명세 수정 금지 (read-only 게이트). `git` 변경 금지 (`Bash` 로 물리적으로 가능하나 honor-based 규칙 — hook 강제 아님).
 - 신호가 불충분한데 임의로 ship 결정 금지 — 불충분하면 no-ship + 사유.
 - 임의 retry 금지.
 

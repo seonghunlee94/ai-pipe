@@ -27,7 +27,7 @@ tools:
    - 순수 함수·모듈 단위 → `test-unit`
    - 여러 모듈/DB/HTTP 를 걸치는 API 흐름 → `test-e2e-api`
    - 브라우저 사용자 시나리오 → `test-e2e-ui`
-3. 해당 테스트 에이전트를 `Agent` tool 로 디스패치하고 각자가 추가한 테스트 수를 수집한다.
+3. 해당 테스트 에이전트를 `Agent` tool 로 디스패치하고 각자가 추가한 테스트 수를 수집한다. 테스트 에이전트들은 worktree 격리가 없어 같은 작업 트리를 공유하므로 **직렬로** 디스패치한다 (병렬 e2e 러너는 포트·DB·컨테이너 상태를 충돌시켜 잘못된 신호를 만든다).
 4. 모든 REQ-N 이 최소 하나의 테스트 레이어로 커버되는지 확인 (미커버 → Escalation).
 5. 출력 JSON 작성.
 
@@ -41,7 +41,8 @@ tools:
   ],
   "dispatched": [{"agent": "test-unit", "tests_added": 4}],
   "uncovered_reqs": [],
-  "summary": "한 줄 요약"
+  "summary": "한 줄 요약",
+  "error": "(failure 일 때만) 실패 사유 한 줄"
 }
 ```
 

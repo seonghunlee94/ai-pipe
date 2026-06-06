@@ -57,7 +57,7 @@ tools:
 - `task_id`
 - `files_created`, `files_modified`: string[]
 - `tests_added`: integer
-- `downstream_notes`: { api_endpoints?, type_changes?, shared_interfaces? }
+- `downstream_notes`: { endpoints?, type_changes?, shared_interfaces? } — endpoint 목록의 정규 채널은 스키마가 보장하는 `meta.endpoints`; `downstream_notes.endpoints` 는 다음 task 로의 편의 전달이며 소비자(frontend/infra/test)와 키 이름을 `endpoints` 로 일치시킨다.
 - `meta.arch_coverage.spec_tasks_covered`: 이번 task 가 커버한 REQ-N 목록 (Concordance Gate §11.2 가 검사)
 
 ## 금지 사항
