@@ -20,7 +20,7 @@ allowed-tools:
 
 ## 절차 (Claude가 직접 수행 — 자체 DAG runtime 없음)
 
-1. **Plan 파싱**: `.artifacts/plans/{slug}-plan.md` 에서 task 목록과 의존성을 읽는다. 각 task 는 `task_id`, `task_branch`, 담당 에이전트(backend-eng/frontend-eng/infra-eng), 의존 task 목록을 가진다.
+1. **Plan 파싱**: `.artifacts/plans/{slug}-plan.md` 의 `## Tasks` 표에서 task 목록과 의존성을 읽는다 — 표 구조는 `${CLAUDE_PLUGIN_DIR}/shared/formats/plan-format.md`(SSOT)를 따른다. 각 task 는 `task_id`, `agent`(backend-eng/frontend-eng/infra-eng), `task_branch`, `depends_on`, `covers` 를 가진다. `story_number`/`issue_number` 는 plan 에 없으므로 실행 시점에 바인딩한다 (GitHub Phase 가 활성이면 그 issue 번호, 로컬 단독 실행이면 기본값) — impl-agent-input 스키마를 완성해 에이전트에 전달.
 2. **Base 브랜치 보장**: fan-out 전에 메인 세션이 `feature_branch` 를 checkout 한 상태인지 확인한다 — native worktree 는 현재 HEAD 에서 분기하므로, main 에 있으면 task 들이 잘못된 base 에서 시작한다.
 3. **위상 정렬**: 의존성이 없는 task 들을 같은 그룹으로 묶는다 (spec §4.2 패턴 B).
 4. **Fan-out**: 같은 그룹의 task 들을 `Agent` tool 로 병렬 호출. impl 에이전트들은 frontmatter 의 `isolation: worktree` 에 의해 하네스가 자동으로 격리된 worktree 에서 실행한다 — worktree **생성**은 항상 하네스 몫이고 이 skill 은 생성하지 않는다 (잔존물 **정리**는 step 6/8 에서 오케스트레이터가 수행).

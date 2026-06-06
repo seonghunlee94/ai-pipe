@@ -21,7 +21,7 @@ allowed-tools:
 3. 사용자에게 다음을 보고:
    - 생성된 spec 파일 경로
    - 요구사항 개수 및 ID 목록
-   - 다음 단계 안내: `/design-plan <slug>` (구현 예정)
+   - 다음 단계 안내: `/design-plan <slug>`
 
 ## 금지 사항
 

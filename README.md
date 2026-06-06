@@ -116,10 +116,11 @@ MCP 연결이 없어도 project-ops 는 gh CLI 로 동작한다 (기능 동일, 
 | `hooks/secrets-scan.sh` (PAT/AWS/API key/JWT/Authorization 헤더(도구 무관)/curl·wget basic-auth 차단 — Edit\|Write+Bash) | working | PR5 |
 | `hooks/session-start.sh` (세션 시작 컨텍스트 주입 — 버전/브랜치/worktree/마지막 이벤트) | working* | PR5, §6 item 8 |
 | `hooks/stop-checkpoint.sh` (세션 종료 시 JSONL checkpoint append) | working* | PR5, §12.1 |
-| `agents/pm.md`, `agents/backend-eng.md`, `agents/project-ops.md` | working | §6.1, §3.2 |
-| `agents/{architect,frontend-eng,infra-eng,qa,test-*,reviewer,verifier}.md` (9개) | stub | §4.1 |
+| `agents/pm.md`, `agents/backend-eng.md`, `agents/project-ops.md`, `agents/architect.md` | working | §6.1, §3.2, §4.1 |
+| `agents/{frontend-eng,infra-eng,qa,test-*,reviewer,verifier}.md` (8개) | stub | §4.1 |
 | `skills/create-spec/SKILL.md` (`user-invocable: true` → `/create-spec`) | working | §4.2 |
-| `skills/design-plan/SKILL.md` | stub | §4.2 |
+| `skills/design-plan/SKILL.md` (`/design-plan <slug>` → architect 호출, spec→plan) | working | §4.2 |
+| `shared/formats/plan-format.md` (plan 정규 구조 SSOT — architect 생성, execute-plan 소비) | working | §4.4 |
 | `skills/execute-plan/SKILL.md` (native fan-out/직렬 merge 절차 — isolation 필드 미실증) | working* | §4.2 |
 | `skills/common-agent-rules/SKILL.md` (paths 자동 활성화) | working | §6.1 |
 | `skills/boundary-enforcement/SKILL.md` (paths 자동 활성화) | working | §6.1, §7.2 |
