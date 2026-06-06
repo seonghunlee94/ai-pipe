@@ -31,13 +31,16 @@ Commands:
   eval <evalsDir> [--outputs <dir>] [--verbose]
                                 Validate *.eval.json cases; with --outputs,
                                 score recorded agent outputs against metrics
+  preflight                     Check required tools (node/npm/git/gh/jq/bash)
+  diff [<dir>] [--all]          Show template-vs-installed changes
+  update [<dir>] [--force]      Sync .claude/ from the template (LOCAL preserved)
+  pipeline <show|get|set> ...   Read/write pipeline config (local overrides)
+  detect [<dir>]                Detect GitHub Projects V2 board → shared/
+  versions                      List versions on the registry
+  upgrade [--version X] [<dir>] Reinstall the global package, then update
+  migrate [<dir>]               Run convention-file migrations (v2.0)
   --version, -v                 Print CLI version
   --help, -h                    Show this help
-
-Not yet implemented (stubs — see src/ and spec §):
-  update     §9.3   upgrade    §9.4   diff       §9.3
-  preflight  §13.3  detect     §3.2   versions   §9.1
-  pipeline   §8.1   migrate    §14
 `;
 
 // Single source of truth for command routing. Stub commands dispatch to their

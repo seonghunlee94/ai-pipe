@@ -139,7 +139,13 @@ MCP 연결이 없어도 project-ops 는 gh CLI 로 동작한다 (기능 동일, 
 | `version` (CLI vs project sync 상태) | working |
 | `validate [<dir>] [--strict] [--quiet]` (JSON 파싱 / hook `bash -n` / agent·skill frontmatter[구조 검사 — name·description 존재] / placeholder / your-org) | working |
 | `eval <evalsDir> [--outputs <dir>] [--verbose]` (`*.eval.json` 케이스 검증 + 기록된 출력을 메트릭으로 채점 — 결정적 회귀 게이트) | working |
-| `update`, `upgrade`, `diff`, `preflight`, `detect`, `versions`, `pipeline`, `migrate` | stub |
+| `preflight` (node/npm/git/gh/jq/bash 존재 검사 — required 누락 시 exit 1) | working |
+| `diff [<dir>] [--all]` / `update [<dir>] [--force]` (template vs 설치 SCAN — new/changed/orphaned/same/local; update 는 dry-run 기본, --force 적용, LOCAL 보존, orphan 미삭제) | working |
+| `pipeline <show\|get\|set> [<key> <value>] [<dir>]` (base+local 병합 dot-path 읽기/쓰기 — set 은 pipeline.local.json) | working |
+| `versions` (registry 조회 — 미발행/오프라인 시 로컬 버전 fallback) | working |
+| `upgrade [--version X] [<dir>]` (글로벌 패키지 재설치 후 update 안내) | working |
+| `detect [<dir>]` (gh 로 Projects V2 보드 탐지 → `shared/github-project-ids.md`; gh/org 전제조건 검사) | working* |
+| `migrate [<dir>]` (convention 마이그레이션 — v2.0 레지스트리, 현재 no-op) | working |
 
 ### 테스트 (DEV2)
 
