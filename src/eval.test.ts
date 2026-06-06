@@ -52,6 +52,18 @@ describe("loadEvalCase", () => {
     expect(() => loadEvalCase(writeCase("i", { name: "i", input: "x", metric: { req_ids_min: "3" } }))).toThrow(/integer >= 0/);
     expect(() => loadEvalCase(writeCase("j", { name: "j", input: "x", metric: { status_in: "success" } }))).toThrow(/array of strings/);
     expect(() => loadEvalCase(writeCase("k", { name: "k", input: "x", metric: { spec_path_exists: "yes" } }))).toThrow(/boolean/);
+    expect(() => loadEvalCase(writeCase("l", { name: "l", input: "x", metric: { status_in: [] } }))).toThrow(/non-empty/);
+  });
+  it("rejects unknown top-level keys (schema additionalProperties:false)", () => {
+    expect(() => loadEvalCase(writeCase("m", { name: "m", input: "x", metric: { req_ids_min: 1 }, bogus: 1 }))).toThrow(/unknown top-level/);
+  });
+  it("loads the shipped seed case", () => {
+    const seed = loadEvalCase(
+      // resolve from this test file to the plugin seed
+      new URL("../plugins/ai-pipe-core/shared/evals/pm-auth-spec.eval.json", import.meta.url).pathname,
+    );
+    expect(seed.name).toBe("pm-auth-spec");
+    expect(Object.keys(seed.metric).length).toBeGreaterThan(0);
   });
 });
 
@@ -134,6 +146,34 @@ describe("runEval", () => {
   it("flags a duplicate case name as invalid", async () => {
     writeCase("dup-a", { name: "same", input: "i", metric: { req_ids_min: 1 } });
     writeCase("dup-b", { name: "same", input: "i", metric: { req_ids_min: 1 } });
+    await expect(runEval([dir])).rejects.toMatchObject({ code: "E_EVAL" });
+  });
+  it("accepts the --outputs=DIR equals form", async () => {
+    caseFile();
+    const out = mkdtempSync(join(tmpdir(), "aipipe-evalout-"));
+    try {
+      writeFileSync(join(out, "c1.json"), JSON.stringify({ status: "success", req_ids: ["REQ-1"] }));
+      await expect(runEval([dir, `--outputs=${out}`])).resolves.toBeUndefined();
+    } finally {
+      rmSync(out, { recursive: true, force: true });
+    }
+  });
+  it("an empty dir reports no cases and exits 0", async () => {
+    await expect(runEval([dir])).resolves.toBeUndefined();
+  });
+  it("skips a case with no recorded output (exit 0), fails on non-JSON output", async () => {
+    caseFile();
+    const out = mkdtempSync(join(tmpdir(), "aipipe-evalout-"));
+    try {
+      await expect(runEval([dir, "--outputs", out])).resolves.toBeUndefined(); // skipped, no output
+      writeFileSync(join(out, "c1.json"), "{ not json");
+      await expect(runEval([dir, "--outputs", out])).rejects.toMatchObject({ code: "E_EVAL" });
+    } finally {
+      rmSync(out, { recursive: true, force: true });
+    }
+  });
+  it("propagates a malformed case file as invalid (E_EVAL)", async () => {
+    writeFileSync(join(dir, "broken.eval.json"), "{ not json");
     await expect(runEval([dir])).rejects.toMatchObject({ code: "E_EVAL" });
   });
 });

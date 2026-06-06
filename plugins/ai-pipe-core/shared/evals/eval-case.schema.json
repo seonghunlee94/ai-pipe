@@ -30,7 +30,7 @@
         },
         "spec_path_exists": {
           "type": "boolean",
-          "description": "Output's spec_path must point at a file that was created."
+          "description": "Output's spec_path must point at a file that was created (resolved relative to the project root / cwd where eval runs)."
         },
         "downstream_notes_not_null": {
           "type": "boolean",

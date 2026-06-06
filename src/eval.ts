@@ -27,7 +27,7 @@ import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { join, resolve } from "node:path";
 
 import { AiPipeError } from "./errors.js";
-import { errMsg } from "./utils.js";
+import { errMsg, hasFlag } from "./utils.js";
 
 export interface Metric {
   readonly req_ids_min?: number;
@@ -94,7 +94,10 @@ const METRICS: Record<string, MetricDef> = {
     },
   },
   status_in: {
-    validate: (v) => (Array.isArray(v) && v.every((x) => typeof x === "string") ? null : "must be an array of strings"),
+    validate: (v) =>
+      Array.isArray(v) && v.length > 0 && v.every((x) => typeof x === "string")
+        ? null
+        : "must be a non-empty array of strings",
     check: (o, v) => {
       const allowed = v as string[];
       const status = o["status"];
@@ -121,6 +124,11 @@ export function loadEvalCase(file: string): EvalCase {
   }
   if (!isObject(json)) {
     throw new AiPipeError("E_EVAL", `${file}: eval case must be a JSON object`, 1);
+  }
+  const allowedTop = ["name", "input", "metric", "agent"];
+  const extra = Object.keys(json).filter((k) => !allowedTop.includes(k));
+  if (extra.length > 0) {
+    throw new AiPipeError("E_EVAL", `${file}: unknown top-level key(s): ${extra.join(", ")} (allowed: ${allowedTop.join(", ")})`, 1);
   }
   const { name, input, metric, agent } = json as Record<string, unknown>;
   if (typeof name !== "string" || name.length === 0) {
@@ -163,6 +171,10 @@ export function checkMetrics(output: unknown, metric: Metric, baseDir: string): 
   return Object.keys(metric).map((key) => {
     const def = METRICS[key];
     if (!def) return { key, pass: false, detail: `unknown metric "${key}" — not scored (typo?)` };
+    // Re-validate the value here too: checkMetrics is a pure, total function that
+    // may be called directly (tests) without loadEvalCase having gated the value.
+    const verr = def.validate(metric[key]);
+    if (verr) return { key, pass: false, detail: `invalid metric value: ${verr}` };
     const { pass, detail } = def.check(obj, metric[key], baseDir);
     return { key, pass, detail };
   });
@@ -212,7 +224,7 @@ export async function runEval(args: string[]): Promise<void> {
   if (outputsDir !== undefined && (!existsSync(outputsDir) || !statSync(outputsDir).isDirectory())) {
     throw new AiPipeError("E_BAD_USAGE", `eval: --outputs not a directory: ${outputsDir}`, 2);
   }
-  const verbose = args.includes("--verbose");
+  const verbose = hasFlag(args, "--verbose");
 
   const files = discoverCases(dir);
   if (files.length === 0) {
