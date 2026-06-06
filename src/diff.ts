@@ -8,7 +8,7 @@ const ORDER: FileStatus[] = ["new", "changed", "orphaned", "same", "local"];
 
 export async function runDiff(args: string[]): Promise<void> {
   const target = resolveTargetDir(args.find((a) => !a.startsWith("-")));
-  const claude = requireInstall(target);
+  const claude = requireInstall(target, "diff");
   const changes = scanTemplate(claude);
   const showAll = args.includes("--all");
   for (const status of ORDER) {

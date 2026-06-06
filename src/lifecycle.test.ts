@@ -5,6 +5,7 @@ import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { parseOrg } from "./detect.js";
+import { runDiff } from "./diff.js";
 import { runInit } from "./init.js";
 import { runMigrate } from "./conventions/migrate.js";
 import { runPipeline } from "./pipeline/commands.js";
@@ -141,6 +142,48 @@ describe("runUpdate", () => {
 
   it("throws when there is no .claude install", async () => {
     await expect(runUpdate([join(dir, "nope")])).rejects.toMatchObject({ code: "E_BAD_USAGE" });
+  });
+});
+
+describe("runDiff", () => {
+  it("renders drift with glyphs and a counts summary; --all includes same/local", async () => {
+    await runInit([dir]);
+    writeFileSync(join(dir, ".claude", "config", "pipeline.json"), "{}"); // drift
+    const writes: string[] = [];
+    vi.spyOn(process.stdout, "write").mockImplementation((s) => (writes.push(String(s)), true));
+    await runDiff([dir]);
+    const out = writes.join("");
+    expect(out).toContain("~ config/pipeline.json");
+    expect(out).toMatch(/diff: 0 new, 1 changed, 0 orphaned/);
+    expect(out).not.toContain("✓"); // same hidden without --all
+
+    writes.length = 0;
+    await runDiff([dir, "--all"]);
+    const all = writes.join("");
+    expect(all).toContain("✓"); // same shown
+    expect(all).toContain("· rules/project-settings.md"); // local shown
+  });
+
+  it("throws when there is no .claude install (message keeps the command prefix)", async () => {
+    await expect(runDiff([join(dir, "nope")])).rejects.toMatchObject({ code: "E_BAD_USAGE" });
+    await expect(runDiff([join(dir, "nope")])).rejects.toThrow(/^diff:/);
+  });
+});
+
+describe("deepMerge prototype safety (via pipeline show/get on a hand-edited local)", () => {
+  it("an own __proto__ key in pipeline.local.json is dropped, never re-points prototypes", async () => {
+    const cfg = join(dir, ".claude", "config");
+    mkdirSync(cfg, { recursive: true });
+    writeFileSync(join(cfg, "pipeline.json"), JSON.stringify({ limits: { max_retries: 3 } }));
+    // JSON.parse creates __proto__ as a plain OWN property; the merge must skip it.
+    writeFileSync(join(cfg, "pipeline.local.json"), '{"__proto__":{"polluted":true},"limits":{"max_retries":9}}');
+    const writes: string[] = [];
+    vi.spyOn(process.stdout, "write").mockImplementation((s) => (writes.push(String(s)), true));
+    await runPipeline(["show", dir]);
+    expect(({} as Record<string, unknown>)["polluted"]).toBeUndefined();
+    const merged = JSON.parse(writes.join(""));
+    expect(merged.limits.max_retries).toBe(9); // override still applied
+    expect(Object.prototype.hasOwnProperty.call(merged, "__proto__")).toBe(false);
   });
 });
 

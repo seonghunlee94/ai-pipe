@@ -16,7 +16,7 @@ import { hasFlag, readPackageInfo, resolveTargetDir, templateDir } from "./utils
 
 export async function runUpdate(args: string[]): Promise<void> {
   const target = resolveTargetDir(args.find((a) => !a.startsWith("-")));
-  const claude = requireInstall(target);
+  const claude = requireInstall(target, "update");
   const force = hasFlag(args, "--force");
 
   const changes = scanTemplate(claude);

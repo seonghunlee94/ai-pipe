@@ -15,7 +15,18 @@ import { errMsg, readOptionValue, readPackageInfo, resolveTargetDir } from "./ut
 
 export async function runUpgrade(args: string[]): Promise<void> {
   const pkg = readPackageInfo();
-  const version = readOptionValue(args, "--version") ?? "latest";
+  // Accept both `--version X` (space) and `--version=X` (equals) — the equals
+  // form was previously silently ignored, installing @latest instead of the
+  // requested version (a surprising global side effect).
+  let version = readOptionValue(args, "--version") ?? "latest";
+  const eqTok = args.find((a) => a.startsWith("--version="));
+  if (eqTok !== undefined) {
+    const val = eqTok.slice("--version=".length);
+    if (val === "") {
+      throw new AiPipeError("E_BAD_USAGE", "upgrade: --version= requires a value", 2);
+    }
+    version = val;
+  }
   const spec = `${pkg.name}@${version}`;
   // Positional dir = first non-flag arg, skipping the --version VALUE (so
   // `upgrade --version 1.2.3 /proj` resolves /proj, not 1.2.3).

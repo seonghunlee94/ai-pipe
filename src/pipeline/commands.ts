@@ -30,12 +30,21 @@ function readJson(file: string): Record<string, unknown> {
   return parsed;
 }
 
-// Deep-merge local over base (objects merged recursively; arrays/scalars replaced).
+// Deep-merge local over base (objects merged recursively; arrays/scalars
+// replaced). Built from scratch, copying only OWN non-forbidden keys: a
+// hand-edited pipeline.local.json can carry an own "__proto__" key
+// (JSON.parse creates it as a plain own property, never the setter), and
+// blindly assigning it onto a normal object would re-point that object's
+// prototype — same guard discipline as getPath/setPath below.
 function deepMerge(base: Record<string, unknown>, over: Record<string, unknown>): Record<string, unknown> {
-  const out: Record<string, unknown> = { ...base };
-  for (const [k, v] of Object.entries(over)) {
-    const cur = out[k];
-    out[k] = isObject(cur) && isObject(v) ? deepMerge(cur, v) : v;
+  const out: Record<string, unknown> = {};
+  for (const src of [base, over]) {
+    for (const k of Object.keys(src)) {
+      if (FORBIDDEN_SEGMENTS.has(k)) continue;
+      const v = src[k];
+      const cur = out[k];
+      out[k] = isObject(cur) && isObject(v) ? deepMerge(cur, v) : v;
+    }
   }
   return out;
 }
