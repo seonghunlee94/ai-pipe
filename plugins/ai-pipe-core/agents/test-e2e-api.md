@@ -32,7 +32,7 @@ tools:
 ## 출력
 
 ```json
-{ "status": "success | failure", "files_created": ["tests/e2e/auth.api.test.ts"], "tests_added": 6, "covers": ["REQ-1", "REQ-3"] }
+{ "status": "success | failure", "files_created": ["tests/e2e/auth.api.test.ts"], "tests_added": 6, "covers": ["REQ-1", "REQ-3"], "error": "(failure 일 때만) 실패 사유 한 줄" }
 ```
 
 ## 금지 사항
