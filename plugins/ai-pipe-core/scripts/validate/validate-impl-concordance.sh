@@ -28,8 +28,10 @@ fi
 SPEC_FILE="$1"
 shift
 
-if [[ ! -f "$SPEC_FILE" ]]; then
-  echo "validate-impl-concordance: spec file not found: $SPEC_FILE" >&2
+# -r (exists AND readable): an unreadable spec must be a hard usage error here,
+# not fall through to grep failing and being misread as "no REQ-N found".
+if [[ ! -f "$SPEC_FILE" || ! -r "$SPEC_FILE" ]]; then
+  echo "validate-impl-concordance: spec file not found or not readable: $SPEC_FILE" >&2
   exit 2
 fi
 
@@ -57,6 +59,13 @@ done
 COVERED_REQS=$(printf '%s' "$COVERED_REQS" | grep -oE 'REQ-[0-9]+' | sort -u || true)
 
 MISSING=$(comm -23 <(printf '%s\n' "$SPEC_REQS") <(printf '%s\n' "$COVERED_REQS"))
+# Coverage claims for REQ-N that do not exist in the spec are likely hallucinated
+# coverage — warn (do not fail; the gate's job is uncovered REQs, not extras).
+EXTRA=$(comm -13 <(printf '%s\n' "$SPEC_REQS") <(printf '%s\n' "$COVERED_REQS"))
+if [[ -n "$EXTRA" ]]; then
+  echo "warning: covered REQ-N not present in the spec (hallucinated coverage?):" >&2
+  printf '%s\n' "$EXTRA" >&2
+fi
 
 if [[ -n "$MISSING" ]]; then
   echo "DESIGN_GAP: the following requirements are not covered by any impl output:" >&2

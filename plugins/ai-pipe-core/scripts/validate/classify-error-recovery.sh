@@ -8,6 +8,12 @@
 # exit  : 1 = retry (caller re-runs within config/pipeline.json limits)
 #         2 = escalate (architect or human)
 #
+# The spec §10.2 stub sketched exit 0=pass / 3=halt; both are intentionally
+# dropped: this script only runs on a FAILURE log (no pass case), and §8's
+# taxonomy has no halt category — halting is the orchestrator's job via
+# pipeline.json limits (thrash_consecutive / global_max_*). The script
+# therefore ALWAYS exits non-zero; `set -e` callers need `|| rc=$?`.
+#
 # Match order = most-explicit marker first, so a log that mentions several
 # things (e.g. a type error inside a failing test run) lands on its root cause:
 #   explicit DESIGN_GAP / CONTEXT_EXHAUSTED markers
@@ -42,13 +48,18 @@ if grep -qiE 'HTTP 429|rate.?limit|timed? ?out|ETIMEDOUT|ECONNRESET|ECONNREFUSED
 fi
 
 # Toolchain categories → retry with the relevant context attached.
-if grep -qE 'error TS[0-9]+|TypeError|type mismatch' <<<"$LOG" || grep -qiE 'type ?error' <<<"$LOG"; then
+# Case-sensitive markers (error TSnnnn, TypeError) and case-insensitive prose
+# ("type error", "Type mismatch") are split into two greps on purpose.
+if grep -qE 'error TS[0-9]+|TypeError' <<<"$LOG" || grep -qiE 'type ?error|type mismatch' <<<"$LOG"; then
   emit TYPE_ERROR retry_with_type_context 1
 fi
 if grep -qiE 'eslint|prettier|biome|stylelint|ruff|lint(ing)? (error|fail)' <<<"$LOG"; then
   emit LINT_ERROR retry_with_lint_context 1
 fi
-if grep -qiE 'test(s)? fail|AssertionError|assertion fail|expected .* (to|but)|✗|FAIL ' <<<"$LOG"; then
+# `✗` / `FAIL ` are runner markers and stay CASE-SENSITIVE — a case-insensitive
+# match would classify prose like "deploy fail occurred" as a test failure.
+if grep -qiE 'test(s)? fail|AssertionError|assertion fail|expected .* (to|but)' <<<"$LOG" \
+   || grep -qE '✗|FAIL ' <<<"$LOG"; then
   emit TEST_FAIL retry_with_failure_log 1
 fi
 

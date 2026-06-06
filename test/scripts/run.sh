@@ -53,6 +53,9 @@ check "concordance: vacuous spec" 1 "vacuously"           -- bash "$C" "$TMP/emp
 check "concordance: bad json"     2 "invalid JSON"        -- bash "$C" "$TMP/spec.md" "$TMP/bad.json"
 check "concordance: usage"        2 "usage:"              -- bash "$C" "$TMP/spec.md"
 check "concordance: missing spec" 2 "not found"           -- bash "$C" "$TMP/nope.md" "$TMP/t1.json"
+# Orphan cover: REQ-99 claimed but absent from the spec → warn on stderr, still exit 0.
+echo '{"meta":{"arch_coverage":{"spec_tasks_covered":["REQ-1","REQ-2","REQ-3","REQ-99"]}}}' > "$TMP/orphan.json"
+check "concordance: orphan warn"  0 "hallucinated"        -- bash "$C" "$TMP/spec.md" "$TMP/orphan.json"
 
 # ---------- classify-error-recovery.sh ----------
 K="$SCRIPTS/classify-error-recovery.sh"
@@ -75,6 +78,15 @@ STDIN="something inexplicable happened" \
 # Root-cause ordering: explicit DESIGN_GAP marker wins over an embedded type error.
 STDIN="DESIGN_GAP found while fixing error TS2322" \
   check "classify: order"        2 '"DESIGN_GAP"'       -- bash "$K"
+# FLAKE via a pattern ETIMEDOUT does NOT also hit (teeth for the 429 alternate).
+STDIN="server replied HTTP 429 too many requests" \
+  check "classify: FLAKE 429"    1 '"FLAKE"'            -- bash "$K"
+# Prose "fail" must NOT be a test-runner marker (FAIL stays case-sensitive).
+STDIN="deploy fail occurred during release window" \
+  check "classify: prose fail"   2 '"UNKNOWN"'          -- bash "$K"
+# Sentence-case "Type mismatch" lands on TYPE_ERROR (insensitive prose side).
+STDIN="Type mismatch: expected Foo but found Bar" \
+  check "classify: Type mismatch" 1 '"TYPE_ERROR"'      -- bash "$K"
 
 echo "── script harness: $PASS passed, $FAIL failed ──"
 [[ "$FAIL" == 0 ]]

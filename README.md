@@ -29,7 +29,7 @@ grep -rl 'your-org' . --include='*.json' --include='*.md' --include='*.ts' --inc
 ### 퍼블리시 체크리스트 (공개/배포 시점에 순서대로)
 
 1. **라이선스 결정** — 현재 `UNLICENSED`(private, 의도된 상태). 공개 전 라이선스(MIT/Apache-2.0 등)를 **사용자가 직접 선택**해 `LICENSE` 파일 추가 + `package.json` `license` 갱신 (§7).
-2. **placeholder 치환** — 위 sed 스윕 실행 후 `node dist/cli.js validate . --strict` 로 잔여 `your-org/` 경고 0 확인.
+2. **placeholder 치환** — 위 sed 스윕 실행 → `npm run build`(dist 재생성) → `node dist/cli.js validate . --strict` 로 잔여 `your-org/` 경고 0 확인.
 3. **§6 실증 라운드** — `/plugin marketplace add` + `/plugin install` 1회 실행으로 미확정 10건(특히 plugin.json 스키마·PreToolUse matcher 이름)을 확정. 결과에 따라 §3 매트릭스 수정.
 4. **버전·태그** — `package.json`/`plugin.json`/`marketplace.json` 버전 정렬 후 `git tag v<X.Y.Z>` push → publish workflow 가 `npm test` 게이트 통과 시 GitHub Packages 로 배포.
 
@@ -157,7 +157,7 @@ MCP 연결이 없어도 project-ops 는 gh CLI 로 동작한다 (기능 동일, 
 
 ### 테스트 (DEV2)
 
-`npm test` = `typecheck`(tsc src+tests; `tsconfig.test.json` 이 base 의 `**/*.test.ts` 제외를 재정의해 테스트도 검사) + `vitest run`(utils/version/validate/init 단위 33케이스) + 훅 하네스(`test/hooks/run.sh`, PreToolUse 6종 44케이스 — exit code + stderr 사유까지 검증). CI(`.github/workflows/ci.yml`)가 push/PR 마다 build+test 를 돌리고, publish workflow 도 `npm test` 게이트를 통과해야 배포한다.
+`npm test` = `typecheck`(tsc src+tests; `tsconfig.test.json` 이 base 의 `**/*.test.ts` 제외를 재정의해 테스트도 검사) + `vitest run`(utils/version/validate/init/eval/lifecycle 단위 테스트) + 훅 하네스(`test/hooks/run.sh` — PreToolUse 6종의 block/allow 를 exit code + stderr 사유까지 검증) + 스크립트 하네스(`test/scripts/run.sh` — concordance gate §11.2 + error classifier §10.2). 정확한 케이스 수는 러너 출력이 SSOT (하드코딩 드리프트 방지). CI(`.github/workflows/ci.yml`)가 push/PR 마다 build+test 를 돌리고, publish workflow 도 `npm test` 게이트를 통과해야 배포한다.
 
 PreToolUse 차단 훅 6종(verify-boundary, verify-git-safety, validate-commit-msg, ban-background, validate-subagent-type, secrets-scan)은 Claude Code 규약(2 = block)을 따르고, lifecycle 훅 2종(session-start, stop-checkpoint)은 best-effort 로 항상 exit 0 (세션을 막지 않음). 하네스는 각 차단 훅의 block/allow 케이스를 jq 페이로드로 검증한다.
 
