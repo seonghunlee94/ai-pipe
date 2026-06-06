@@ -137,7 +137,7 @@ MCP 연결이 없어도 project-ops 는 gh CLI 로 동작한다 (기능 동일, 
 |------|------|
 | `init` (LOCAL_FILES 보호, `.gitignore` 자동 패치, plugin marketplace 안내, 설치 후 sanity validate) | working |
 | `version` (CLI vs project sync 상태) | working |
-| `validate [<dir>] [--strict] [--quiet]` (JSON 파싱 / hook `bash -n` / agent·skill frontmatter / placeholder / your-org) | working |
+| `validate [<dir>] [--strict] [--quiet]` (JSON 파싱 / hook `bash -n` / agent·skill frontmatter[구조 검사 — name·description 존재] / placeholder / your-org) | working |
 | `update`, `upgrade`, `diff`, `preflight`, `detect`, `versions`, `pipeline`, `migrate` | stub |
 
 ### 훅 검증

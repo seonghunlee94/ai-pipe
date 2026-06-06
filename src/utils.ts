@@ -5,6 +5,12 @@ import { dirname, resolve, join } from "node:path";
 
 import { AiPipeError } from "./errors.js";
 
+// Narrow an unknown thrown value to a message string, matching the repo's
+// instanceof-narrowing convention (cli.ts/utils.ts) rather than `as Error` casts.
+export function errMsg(e: unknown): string {
+  return e instanceof Error ? e.message : String(e);
+}
+
 // Spec §2: read CLI options without external libraries.
 export function readOptionValue(args: string[], flag: string): string | undefined {
   const idx = args.indexOf(flag);
