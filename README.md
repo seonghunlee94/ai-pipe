@@ -2,7 +2,7 @@
 
 Claude Code 기반 멀티 에이전트 자동화 파이프라인. **Claude Code Plugin Marketplace**로 배포하여 다양한 프로젝트·머신에서 공유 가능하고, 프로젝트별 설정과 GitHub Issues/Projects V2 연동을 지원한다.
 
-> **현재 상태: DEV1–7 아크 완료 (퍼블리시 준비 단계)**. 12개 에이전트 전부 정의, spec→plan→execute 파이프라인 척추 연결, PreToolUse 6종 + SessionStart/Stop 훅, CLI 11개 명령(init/version/validate/eval + 라이프사이클 8종), Concordance Gate·오류 분류기, 4-레이어 테스트 스위트(typecheck/vitest/훅·스크립트 하네스) + CI. 남은 것: §0 퍼블리시 체크리스트(라이선스 선택·§6 실증 라운드는 사용자 소유). 자세한 설계는 [`multi-agent-pipeline-best-practices.md`](./multi-agent-pipeline-best-practices.md).
+> **현재 상태: DEV1–7 아크 완료 (퍼블리시 준비 단계)**. 12개 에이전트 전부 정의, spec→plan→execute 파이프라인 척추 연결, PreToolUse 6종 + SessionStart/Stop 훅, CLI 12개 명령(init/version/validate/eval + 라이프사이클 8종), Concordance Gate·오류 분류기, 4-레이어 테스트 스위트(typecheck/vitest/훅·스크립트 하네스) + CI. 남은 것: §0 퍼블리시 체크리스트(라이선스 선택·§6 실증 라운드는 사용자 소유). 자세한 설계는 [`multi-agent-pipeline-best-practices.md`](./multi-agent-pipeline-best-practices.md).
 
 ---
 
