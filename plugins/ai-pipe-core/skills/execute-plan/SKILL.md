@@ -34,9 +34,10 @@ allowed-tools:
 6. **Merge 후 정리** (순서 중요 — git 은 worktree 에 checkout 된 브랜치 삭제를 거부한다):
    1. 변경 있던 task worktree 잔존물을 먼저 정리: `git worktree remove <path>` (변경 없는 worktree 는 하네스가 이미 자동 정리)
    2. 그 다음 merge 된 task 브랜치 삭제: `git branch -d` (안전 삭제 — `-D` 는 hook 이 차단)
-7. **이벤트 기록**: 각 단계를 `.artifacts/runs/{slug}-events.jsonl` 에 append (`task_start`/`task_done`/`task_retry`/`escalation`, spec §12.1). 첫 append 전에 `mkdir -p .artifacts/runs` (디렉토리 없으면 `>>` 가 실패 — pm 의 specs/, architect 의 plans/ 와 동일 패턴).
+7. **이벤트·출력 기록**: 각 단계를 `.artifacts/runs/{slug}-events.jsonl` 에 append (`task_start`/`task_done`/`task_retry`/`escalation`, spec §12.1). 첫 append 전에 `mkdir -p .artifacts/runs` (디렉토리 없으면 `>>` 가 실패 — pm 의 specs/, architect 의 plans/ 와 동일 패턴). 또한 각 task 의 출력 JSON 을 `.artifacts/runs/{slug}-impl-outputs/{task_id}.json` 으로 저장한다 — `/verify {slug}` 가 세션 경계를 넘어 Concordance Gate 입력으로 쓴다.
 8. **실패 처리**: task 실패 시 실패 로그를 `${CLAUDE_PLUGIN_DIR}/scripts/validate/classify-error-recovery.sh` 의 stdin 으로 넘겨 분류한다 — stdout 의 `{category, action}` 과 exit 코드(1 = 재시도, 2 = escalate; 항상 비-0 이므로 `|| rc=$?` 로 받기)를 따르고, **그 외 rc(126/127 등 스크립트 자체 실행 실패)는 `ENV_FAILURE` 로 사람에게** escalate 한다. 분류 표의 SSOT 는 `common-agent-rules` skill §8. 재시도 한도는 `config/pipeline.json` 의 `limits`.
    - **재시도 전 정리 (필수)**: 실패한 attempt 의 worktree 가 task 브랜치를 checkout 한 채 잔존하면 재시도 에이전트의 `git checkout ${task_branch}` 가 거부된다 (git 은 다른 worktree 에 checkout 된 브랜치의 재checkout 을 막는다). 재호출 전에 **오케스트레이터가** `git worktree remove --force <실패 attempt 의 worktree 경로>` 로 잔존물을 정리한다 — impl 에이전트 자신은 `git worktree` 실행이 금지되어 있으므로 이 정리는 항상 오케스트레이터 책임이다. 이전 attempt 의 uncommitted 변경은 worktree 제거와 함께 사라진다 — 재시도는 마지막 commit 시점부터 다시 시작한다.
+9. **완료 보고**: 모든 그룹이 merge 되면 task 별 결과 요약과 함께 다음 단계 `/verify {slug}` (검증 스테이지: qa→test-*→reviewer→verifier→ship/no-ship) 를 안내한다.
 
 ## 금지 사항
 

@@ -128,6 +128,7 @@ MCP 연결이 없어도 project-ops 는 gh CLI 로 동작한다 (기능 동일, 
 | `agents/{pm,backend-eng,project-ops,architect,frontend-eng,infra-eng,qa,reviewer,verifier,test-unit,test-e2e-api,test-e2e-ui}.md` (12종 전부 정의됨) | working | §4.1, §6.1, §3.2 |
 | `skills/create-spec/SKILL.md` (`user-invocable: true` → `/create-spec`) | working | §4.2 |
 | `skills/design-plan/SKILL.md` (`/design-plan <slug>` → architect 호출, spec→plan) | working | §4.2 |
+| `skills/verify/SKILL.md` (`/verify <slug>` → qa→test-*→reviewer→verifier 오케스트레이션, ship/no-ship) | working | §4.2, §4.4, §11.2 |
 | `shared/formats/plan-format.md` (plan 정규 구조 SSOT — architect 생성, execute-plan 소비) | working | §4.4 |
 | `skills/execute-plan/SKILL.md` (native fan-out/직렬 merge 절차 — isolation 필드 미실증) | working* | §4.2 |
 | `skills/common-agent-rules/SKILL.md` (paths 자동 활성화) | working | §6.1 |
@@ -173,11 +174,12 @@ PreToolUse 차단 훅 6종(verify-boundary, verify-git-safety, validate-commit-m
 /create-spec 사용자 인증 기능을 만들어줘   # PM → .artifacts/specs/{slug}-spec.md, slug 보고
 /design-plan {slug}                        # architect → .artifacts/plans/{slug}-plan.md (task DAG)
 /execute-plan {slug}                       # feat/{slug} 멱등 생성 → impl 에이전트 fan-out → 직렬 merge
+/verify {slug}                             # qa→test-*→reviewer→verifier → ship / no-ship 결정
 ```
 
 - 산출물은 `.artifacts/`(specs/plans/runs) 아래에 떨어진다. 실행 이벤트는 `.artifacts/runs/{slug}-events.jsonl`, 진행/비용은 `${CLAUDE_PLUGIN_DIR}/bin/adp-watch {slug}`.
 - 로컬 단독(GitHub 미연동) 실행은 `config/pipeline.json` 의 `local_defaults`(story/issue=1)로 impl-agent-input 을 채운다. GitHub Issues/Projects 연동은 project-ops 에이전트가 담당.
-- impl 에이전트 3종(backend/frontend/infra-eng)이 모두 정의됨 — plan 의 task 가 어느 레이어든 execute-plan 이 fan-out 한다. 검증 단계는 qa→test-*→reviewer→verifier(ship/no-ship) 에이전트가 담당하나, 이를 묶는 오케스트레이터 skill 은 아직 없다(현재는 수동 호출; `verify` skill 은 백로그).
+- impl 에이전트 3종(backend/frontend/infra-eng)이 모두 정의됨 — plan 의 task 가 어느 레이어든 execute-plan 이 fan-out 한다. 검증 단계는 `/verify {slug}` 가 qa→test-*(직렬)→reviewer→verifier 를 오케스트레이션해 ship/no-ship 을 보고한다 (Concordance Gate 입력은 execute-plan 이 영속화한 `.artifacts/runs/{slug}-impl-outputs/*.json`).
 
 ---
 
