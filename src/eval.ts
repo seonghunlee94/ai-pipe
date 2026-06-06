@@ -7,6 +7,14 @@
 // agent) is a Claude Code / manual step; this command scores the result so a
 // prompt change can be regression-checked.
 //
+// Each metric reads a fixed field of the agent OUTPUT object:
+//   req_ids_min (number)            → output.req_ids.length >= value
+//   spec_path_exists (bool)         → existsSync(<cwd>/output.spec_path) === value
+//   downstream_notes_not_null (bool)→ (output.downstream_notes is a non-null object) === value
+//   status_in (string[])            → output.status ∈ value
+// spec_path is resolved relative to the CURRENT WORKING DIRECTORY (the project
+// root where the agent created the spec), not the outputs dir.
+//
 // Usage:
 //   ai-pipe eval <evalsDir>                  # discover + validate cases
 //   ai-pipe eval <evalsDir> --outputs <dir>  # also score each case against
@@ -19,14 +27,13 @@ import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { join, resolve } from "node:path";
 
 import { AiPipeError } from "./errors.js";
-import { errMsg, hasFlag, readOptionValue } from "./utils.js";
+import { errMsg } from "./utils.js";
 
 export interface Metric {
   readonly req_ids_min?: number;
   readonly spec_path_exists?: boolean;
   readonly downstream_notes_not_null?: boolean;
   readonly status_in?: readonly string[];
-  // schema allows additionalProperties; unknown keys are reported, not silently ignored.
   readonly [key: string]: unknown;
 }
 
@@ -43,19 +50,62 @@ export interface MetricResult {
   readonly detail: string;
 }
 
-const KNOWN_METRICS = new Set([
-  "req_ids_min",
-  "spec_path_exists",
-  "downstream_notes_not_null",
-  "status_in",
-]);
-
 function isObject(v: unknown): v is Record<string, unknown> {
   return typeof v === "object" && v !== null && !Array.isArray(v);
 }
 
-// Parse + structurally validate one eval case file. Throws AiPipeError on a
-// malformed case so the caller can attribute it to the file.
+// Single registry: each metric declares how to validate its case-file value and
+// how to score an output. Adding a metric = one entry here (no parallel lists).
+interface MetricDef {
+  // Returns an error string if the case-file value is the wrong type, else null.
+  validate(value: unknown): string | null;
+  // Scores a recorded output. baseDir resolves any referenced path.
+  check(output: Record<string, unknown>, value: unknown, baseDir: string): { pass: boolean; detail: string };
+}
+
+const METRICS: Record<string, MetricDef> = {
+  req_ids_min: {
+    validate: (v) => (typeof v === "number" && Number.isInteger(v) && v >= 0 ? null : "must be an integer >= 0"),
+    check: (o, v) => {
+      const min = v as number;
+      const ids = o["req_ids"];
+      const count = Array.isArray(ids) ? ids.length : 0;
+      return { pass: count >= min, detail: `req_ids count ${count} ${count >= min ? ">=" : "<"} ${min}` };
+    },
+  },
+  spec_path_exists: {
+    validate: (v) => (typeof v === "boolean" ? null : "must be a boolean"),
+    check: (o, v, baseDir) => {
+      const want = v as boolean;
+      const sp = o["spec_path"];
+      const exists = typeof sp === "string" && existsSync(resolve(baseDir, sp));
+      return {
+        pass: exists === want,
+        detail: typeof sp === "string" ? `spec_path "${sp}" exists=${exists} (want ${want})` : "spec_path missing/not a string",
+      };
+    },
+  },
+  downstream_notes_not_null: {
+    validate: (v) => (typeof v === "boolean" ? null : "must be a boolean"),
+    check: (o, v) => {
+      const want = v as boolean;
+      const notNull = isObject(o["downstream_notes"]);
+      return { pass: notNull === want, detail: `downstream_notes is ${notNull ? "a non-null object" : "null/absent/non-object"} (want not-null=${want})` };
+    },
+  },
+  status_in: {
+    validate: (v) => (Array.isArray(v) && v.every((x) => typeof x === "string") ? null : "must be an array of strings"),
+    check: (o, v) => {
+      const allowed = v as string[];
+      const status = o["status"];
+      const ok = typeof status === "string" && allowed.includes(status);
+      return { pass: ok, detail: `status ${JSON.stringify(status)} in ${JSON.stringify(allowed)}` };
+    },
+  },
+};
+
+// Parse + structurally validate one eval case file (including metric key/value
+// types). Throws AiPipeError on a malformed case so the caller can attribute it.
 export function loadEvalCase(file: string): EvalCase {
   let raw: string;
   try {
@@ -85,73 +135,62 @@ export function loadEvalCase(file: string): EvalCase {
   if (agent !== undefined && typeof agent !== "string") {
     throw new AiPipeError("E_EVAL", `${file}: "agent" must be a string`, 1);
   }
-  const result: EvalCase = agent === undefined
-    ? { name, input, metric: metric as Metric }
-    : { name, input, agent, metric: metric as Metric };
-  return result;
-}
-
-// Score a recorded agent output against a case's metrics. `baseDir` resolves
-// any relative path the output references (e.g. spec_path). Returns one result
-// per declared metric; unknown metric keys are reported as failures so a typo
-// in a case is loud rather than silently green.
-export function checkMetrics(output: unknown, metric: Metric, baseDir: string): MetricResult[] {
-  const out: MetricResult[] = [];
-  const obj = isObject(output) ? output : {};
-
-  for (const key of Object.keys(metric)) {
-    if (key === "req_ids_min") {
-      const min = metric.req_ids_min ?? 0;
-      const ids = obj["req_ids"];
-      const count = Array.isArray(ids) ? ids.length : 0;
-      out.push({
-        key,
-        pass: count >= min,
-        detail: `req_ids count ${count} ${count >= min ? ">=" : "<"} ${min}`,
-      });
-    } else if (key === "spec_path_exists") {
-      const want = metric.spec_path_exists === true;
-      const sp = obj["spec_path"];
-      const exists = typeof sp === "string" && existsSync(resolve(baseDir, sp));
-      out.push({
-        key,
-        pass: exists === want,
-        detail: typeof sp === "string" ? `spec_path "${sp}" exists=${exists}` : "spec_path missing/not a string",
-      });
-    } else if (key === "downstream_notes_not_null") {
-      const want = metric.downstream_notes_not_null === true;
-      const dn = obj["downstream_notes"];
-      const notNull = isObject(dn);
-      out.push({
-        key,
-        pass: notNull === want,
-        detail: `downstream_notes is ${notNull ? "a non-null object" : "null/absent/non-object"}`,
-      });
-    } else if (key === "status_in") {
-      const allowed = Array.isArray(metric.status_in) ? metric.status_in : [];
-      const status = obj["status"];
-      const ok = typeof status === "string" && allowed.includes(status);
-      out.push({
-        key,
-        pass: ok,
-        detail: `status ${JSON.stringify(status)} in ${JSON.stringify(allowed)}`,
-      });
-    } else if (!KNOWN_METRICS.has(key)) {
-      out.push({ key, pass: false, detail: `unknown metric "${key}" — not scored (typo?)` });
+  const keys = Object.keys(metric);
+  if (keys.length === 0) {
+    throw new AiPipeError("E_EVAL", `${file}: "metric" defines no metrics (would vacuously pass)`, 1);
+  }
+  for (const key of keys) {
+    const def = METRICS[key];
+    if (!def) {
+      throw new AiPipeError("E_EVAL", `${file}: unknown metric "${key}" (known: ${Object.keys(METRICS).join(", ")})`, 1);
+    }
+    const err = def.validate(metric[key]);
+    if (err) {
+      throw new AiPipeError("E_EVAL", `${file}: metric "${key}" ${err}`, 1);
     }
   }
-  return out;
+  return agent === undefined
+    ? { name, input, metric: metric as Metric }
+    : { name, input, agent, metric: metric as Metric };
+}
+
+// Score a recorded agent output against a case's metrics. `baseDir` resolves any
+// path the output references (e.g. spec_path). One result per declared metric;
+// an unknown key (only reachable when called directly, not via loadEvalCase) is
+// a failure, never a silent pass.
+export function checkMetrics(output: unknown, metric: Metric, baseDir: string): MetricResult[] {
+  const obj = isObject(output) ? output : {};
+  return Object.keys(metric).map((key) => {
+    const def = METRICS[key];
+    if (!def) return { key, pass: false, detail: `unknown metric "${key}" — not scored (typo?)` };
+    const { pass, detail } = def.check(obj, metric[key], baseDir);
+    return { key, pass, detail };
+  });
 }
 
 function discoverCases(dir: string): string[] {
-  return readdirSync(dir)
-    .filter((f) => f.endsWith(".eval.json"))
+  return readdirSync(dir, { withFileTypes: true })
+    .filter((e) => e.isFile() && e.name.endsWith(".eval.json"))
+    .map((e) => e.name)
     .sort()
-    .map((f) => join(dir, f));
+    .map((name) => join(dir, name));
 }
 
 export async function runEval(args: string[]): Promise<void> {
-  // Collect positionals, skipping flags AND the value that follows --outputs.
+  // --outputs <dir> | --outputs=<dir>: require a real value (a mistyped flag
+  // must not silently downgrade a regression gate to "validate-only, pass").
+  let outputsDir: string | undefined;
+  const oi = args.findIndex((a) => a === "--outputs" || a.startsWith("--outputs="));
+  if (oi !== -1) {
+    const tok = args[oi] ?? "";
+    const val = tok.startsWith("--outputs=") ? tok.slice("--outputs=".length) : args[oi + 1];
+    if (val === undefined || val === "" || val.startsWith("-")) {
+      throw new AiPipeError("E_BAD_USAGE", "eval: --outputs requires a directory", 2);
+    }
+    outputsDir = resolve(process.cwd(), val);
+  }
+
+  // Positionals: skip flags and the --outputs value (space form).
   const positionals: string[] = [];
   for (let i = 0; i < args.length; i++) {
     const a = args[i];
@@ -164,15 +203,16 @@ export async function runEval(args: string[]): Promise<void> {
     positionals.push(a);
   }
   if (positionals.length !== 1) {
-    throw new AiPipeError("E_BAD_USAGE", "usage: ai-pipe eval <evalsDir> [--outputs <dir>]", 2);
+    throw new AiPipeError("E_BAD_USAGE", "usage: ai-pipe eval <evalsDir> [--outputs <dir>] [--verbose]", 2);
   }
-  const dir = resolve(process.cwd(), positionals[0] ?? ".");
+  const dir = resolve(process.cwd(), positionals[0] as string);
   if (!existsSync(dir) || !statSync(dir).isDirectory()) {
     throw new AiPipeError("E_BAD_USAGE", `eval: not a directory: ${dir}`, 2);
   }
-  const outputsArg = readOptionValue(args, "--outputs");
-  const outputsDir = outputsArg !== undefined ? resolve(process.cwd(), outputsArg) : undefined;
-  const verbose = hasFlag(args, "--verbose");
+  if (outputsDir !== undefined && (!existsSync(outputsDir) || !statSync(outputsDir).isDirectory())) {
+    throw new AiPipeError("E_BAD_USAGE", `eval: --outputs not a directory: ${outputsDir}`, 2);
+  }
+  const verbose = args.includes("--verbose");
 
   const files = discoverCases(dir);
   if (files.length === 0) {
@@ -184,6 +224,7 @@ export async function runEval(args: string[]): Promise<void> {
   let scored = 0;
   let failed = 0;
   let skipped = 0;
+  const seenNames = new Set<string>();
 
   for (const file of files) {
     let evalCase: EvalCase;
@@ -194,9 +235,15 @@ export async function runEval(args: string[]): Promise<void> {
       process.stdout.write(`✗ ${file}: ${errMsg(e)}\n`);
       continue;
     }
+    if (seenNames.has(evalCase.name)) {
+      invalid++;
+      process.stdout.write(`✗ ${file}: duplicate case name "${evalCase.name}" (output would collide)\n`);
+      continue;
+    }
+    seenNames.add(evalCase.name);
 
     if (outputsDir === undefined) {
-      process.stdout.write(`✓ ${evalCase.name}: valid (metrics: ${Object.keys(evalCase.metric).join(", ") || "none"})\n`);
+      process.stdout.write(`✓ ${evalCase.name}: valid (metrics: ${Object.keys(evalCase.metric).join(", ")})\n`);
       continue;
     }
 
@@ -214,7 +261,9 @@ export async function runEval(args: string[]): Promise<void> {
       process.stdout.write(`✗ ${evalCase.name}: output not valid JSON (${errMsg(e)})\n`);
       continue;
     }
-    const results = checkMetrics(output, evalCase.metric, outputsDir);
+    // spec_path in the output is relative to the project root (cwd), not the
+    // outputs dir holding the JSON.
+    const results = checkMetrics(output, evalCase.metric, process.cwd());
     const casePass = results.every((r) => r.pass);
     scored++;
     if (!casePass) failed++;

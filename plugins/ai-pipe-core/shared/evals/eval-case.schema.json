@@ -3,7 +3,7 @@
   "$id": "https://github.com/your-org/ai-pipe/schemas/eval-case.schema.json",
   "$comment": "$id contains the `your-org` placeholder; replace before publishing via the sed recipe in README §0.",
   "title": "Eval Case",
-  "description": "PR6 — a single prompt-regression eval case: fixed input + expected output metrics. Run by `ai-pipe eval` (runner is future work).",
+  "description": "A single prompt-regression eval case: fixed input + expected output metrics. Scored by `ai-pipe eval <dir> --outputs <dir>` against a recorded agent output at <outputs>/<name>.json. Each metric reads a fixed output field (req_ids_min→req_ids.length, spec_path_exists→spec_path, downstream_notes_not_null→downstream_notes, status_in→status).",
   "type": "object",
   "required": ["name", "input", "metric"],
   "properties": {
@@ -21,7 +21,7 @@
     },
     "metric": {
       "type": "object",
-      "description": "Expected output assertions. Keys are case-specific; the runner checks each that is present.",
+      "description": "Expected output assertions. Only the keys below are recognized; `ai-pipe eval` treats an unknown metric key as a failure (typo-loud), so additionalProperties is false.",
       "properties": {
         "req_ids_min": {
           "type": "integer",
@@ -42,7 +42,7 @@
           "description": "Output status must be one of these values."
         }
       },
-      "additionalProperties": true
+      "additionalProperties": false
     }
   },
   "additionalProperties": false

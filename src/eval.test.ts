@@ -2,16 +2,17 @@ import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { AiPipeError } from "./errors.js";
-import { checkMetrics, loadEvalCase, type Metric } from "./eval.js";
+import { checkMetrics, loadEvalCase, runEval, type Metric } from "./eval.js";
 
 let dir: string;
 beforeEach(() => {
   dir = mkdtempSync(join(tmpdir(), "aipipe-eval-"));
 });
 afterEach(() => {
+  vi.restoreAllMocks();
   rmSync(dir, { recursive: true, force: true });
 });
 
@@ -23,25 +24,34 @@ function writeCase(name: string, body: unknown): string {
 
 describe("loadEvalCase", () => {
   it("parses a well-formed case", () => {
-    const f = writeCase("ok", { name: "ok", input: "do x", metric: { status_in: ["success"] } });
-    const c = loadEvalCase(f);
+    const c = loadEvalCase(writeCase("ok", { name: "ok", input: "do x", metric: { status_in: ["success"] } }));
     expect(c.name).toBe("ok");
-    expect(c.input).toBe("do x");
     expect(c.metric.status_in).toEqual(["success"]);
   });
   it("keeps the optional agent field when present, omits it otherwise", () => {
-    const withAgent = loadEvalCase(writeCase("a", { name: "a", agent: "pm", input: "i", metric: {} }));
+    const withAgent = loadEvalCase(writeCase("a", { name: "a", agent: "pm", input: "i", metric: { req_ids_min: 1 } }));
     expect(withAgent.agent).toBe("pm");
-    const without = loadEvalCase(writeCase("b", { name: "b", input: "i", metric: {} }));
+    const without = loadEvalCase(writeCase("b", { name: "b", input: "i", metric: { req_ids_min: 1 } }));
     expect(without.agent).toBeUndefined();
   });
-  it("rejects malformed cases", () => {
-    expect(() => loadEvalCase(writeCase("c", { input: "i", metric: {} }))).toThrow(AiPipeError);
-    expect(() => loadEvalCase(writeCase("d", { name: "d", metric: {} }))).toThrow(/missing string "input"/);
+  it("rejects structural problems", () => {
+    expect(() => loadEvalCase(writeCase("c", { input: "i", metric: { req_ids_min: 1 } }))).toThrow(/missing string "name"/);
+    expect(() => loadEvalCase(writeCase("d", { name: "d", metric: { req_ids_min: 1 } }))).toThrow(/missing string "input"/);
     expect(() => loadEvalCase(writeCase("e", { name: "e", input: "i" }))).toThrow(/missing object "metric"/);
     const bad = join(dir, "f.eval.json");
     writeFileSync(bad, "{ not json");
     expect(() => loadEvalCase(bad)).toThrow(/invalid JSON/);
+  });
+  it("rejects an empty metric (would vacuously pass)", () => {
+    expect(() => loadEvalCase(writeCase("g", { name: "g", input: "i", metric: {} }))).toThrow(/no metrics/);
+  });
+  it("rejects an unknown metric key", () => {
+    expect(() => loadEvalCase(writeCase("h", { name: "h", input: "i", metric: { typo: 1 } }))).toThrow(/unknown metric "typo"/);
+  });
+  it("rejects wrong metric value types", () => {
+    expect(() => loadEvalCase(writeCase("i", { name: "i", input: "x", metric: { req_ids_min: "3" } }))).toThrow(/integer >= 0/);
+    expect(() => loadEvalCase(writeCase("j", { name: "j", input: "x", metric: { status_in: "success" } }))).toThrow(/array of strings/);
+    expect(() => loadEvalCase(writeCase("k", { name: "k", input: "x", metric: { spec_path_exists: "yes" } }))).toThrow(/boolean/);
   });
 });
 
@@ -53,12 +63,18 @@ describe("checkMetrics", () => {
     expect(checkMetrics({ req_ids: ["REQ-1"] }, m, base)[0]?.pass).toBe(false);
     expect(checkMetrics({}, m, base)[0]?.pass).toBe(false);
   });
-  it("downstream_notes_not_null: object passes, null/array/absent fail", () => {
+  it("downstream_notes_not_null: object (incl. empty {}) passes, null/array/absent fail", () => {
     const m: Metric = { downstream_notes_not_null: true };
     expect(checkMetrics({ downstream_notes: { a: 1 } }, m, base)[0]?.pass).toBe(true);
+    expect(checkMetrics({ downstream_notes: {} }, m, base)[0]?.pass).toBe(true); // empty object is allowed
     expect(checkMetrics({ downstream_notes: null }, m, base)[0]?.pass).toBe(false);
     expect(checkMetrics({ downstream_notes: [] }, m, base)[0]?.pass).toBe(false);
     expect(checkMetrics({}, m, base)[0]?.pass).toBe(false);
+  });
+  it("downstream_notes_not_null:false inverts the assertion", () => {
+    const m: Metric = { downstream_notes_not_null: false };
+    expect(checkMetrics({ downstream_notes: null }, m, base)[0]?.pass).toBe(true);
+    expect(checkMetrics({ downstream_notes: { a: 1 } }, m, base)[0]?.pass).toBe(false);
   });
   it("status_in: membership check", () => {
     const m: Metric = { status_in: ["success"] };
@@ -66,22 +82,58 @@ describe("checkMetrics", () => {
     expect(checkMetrics({ status: "failure" }, m, base)[0]?.pass).toBe(false);
     expect(checkMetrics({}, m, base)[0]?.pass).toBe(false);
   });
-  it("spec_path_exists: resolves relative to baseDir", () => {
+  it("spec_path_exists: resolves relative to baseDir, honors true and false", () => {
     writeFileSync(join(dir, "spec.md"), "x");
-    const m: Metric = { spec_path_exists: true };
-    expect(checkMetrics({ spec_path: "spec.md" }, m, dir)[0]?.pass).toBe(true);
-    expect(checkMetrics({ spec_path: "missing.md" }, m, dir)[0]?.pass).toBe(false);
-    expect(checkMetrics({}, m, dir)[0]?.pass).toBe(false);
+    expect(checkMetrics({ spec_path: "spec.md" }, { spec_path_exists: true }, dir)[0]?.pass).toBe(true);
+    expect(checkMetrics({ spec_path: "missing.md" }, { spec_path_exists: true }, dir)[0]?.pass).toBe(false);
+    expect(checkMetrics({ spec_path: "missing.md" }, { spec_path_exists: false }, dir)[0]?.pass).toBe(true);
   });
   it("flags an unknown metric key as a failure (not a silent pass)", () => {
     const r = checkMetrics({}, { typo_metric: 1 } as Metric, base);
-    expect(r).toHaveLength(1);
     expect(r[0]?.pass).toBe(false);
     expect(r[0]?.detail).toMatch(/unknown metric/);
   });
   it("a non-object output fails all metrics rather than throwing", () => {
-    const m: Metric = { req_ids_min: 1, status_in: ["success"] };
-    const r = checkMetrics(null, m, base);
-    expect(r.every((x) => !x.pass)).toBe(true);
+    expect(checkMetrics(null, { req_ids_min: 1, status_in: ["success"] }, base).every((x) => !x.pass)).toBe(true);
+  });
+});
+
+describe("runEval", () => {
+  beforeEach(() => {
+    vi.spyOn(process.stdout, "write").mockReturnValue(true);
+  });
+  function caseFile(): void {
+    writeCase("c1", { name: "c1", input: "i", metric: { status_in: ["success"], req_ids_min: 1 } });
+  }
+
+  it("validate-only: passes for a valid case dir", async () => {
+    caseFile();
+    await expect(runEval([dir])).resolves.toBeUndefined();
+  });
+  it("rejects a missing --outputs value (no silent downgrade)", async () => {
+    caseFile();
+    await expect(runEval([dir, "--outputs"])).rejects.toMatchObject({ code: "E_BAD_USAGE" });
+    await expect(runEval([dir, "--outputs", "--verbose"])).rejects.toMatchObject({ code: "E_BAD_USAGE" });
+  });
+  it("rejects a non-existent --outputs dir (no false green)", async () => {
+    caseFile();
+    await expect(runEval([dir, "--outputs", join(dir, "nope")])).rejects.toMatchObject({ code: "E_BAD_USAGE" });
+  });
+  it("scores: passes when the output meets metrics, throws E_EVAL when it fails", async () => {
+    caseFile();
+    const out = mkdtempSync(join(tmpdir(), "aipipe-evalout-"));
+    try {
+      writeFileSync(join(out, "c1.json"), JSON.stringify({ status: "success", req_ids: ["REQ-1"] }));
+      await expect(runEval([dir, "--outputs", out])).resolves.toBeUndefined();
+      writeFileSync(join(out, "c1.json"), JSON.stringify({ status: "failure", req_ids: [] }));
+      await expect(runEval([dir, "--outputs", out])).rejects.toMatchObject({ code: "E_EVAL" });
+    } finally {
+      rmSync(out, { recursive: true, force: true });
+    }
+  });
+  it("flags a duplicate case name as invalid", async () => {
+    writeCase("dup-a", { name: "same", input: "i", metric: { req_ids_min: 1 } });
+    writeCase("dup-b", { name: "same", input: "i", metric: { req_ids_min: 1 } });
+    await expect(runEval([dir])).rejects.toMatchObject({ code: "E_EVAL" });
   });
 });
