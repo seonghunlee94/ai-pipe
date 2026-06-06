@@ -2,11 +2,22 @@
 // template tree against an installed .claude/ tree, classifying each file.
 // LOCAL_FILES / LOCAL_DIRS (spec §8.3) are never touched.
 
-import { existsSync, readdirSync } from "node:fs";
+import { existsSync, readdirSync, statSync } from "node:fs";
 import { join, sep } from "node:path";
 
+import { AiPipeError } from "./errors.js";
 import { LOCAL_DIRS, LOCAL_FILES } from "./local-files.js";
 import { fileHash, templateDir } from "./utils.js";
+
+// Resolve and require an installed .claude/ tree under target; shared by
+// diff + update so the precondition lives in one place.
+export function requireInstall(target: string): string {
+  const claude = join(target, ".claude");
+  if (!existsSync(claude) || !statSync(claude).isDirectory()) {
+    throw new AiPipeError("E_BAD_USAGE", `no .claude/ install at ${target} (run \`ai-pipe init\` first)`, 2);
+  }
+  return claude;
+}
 
 export type FileStatus = "new" | "changed" | "same" | "orphaned" | "local";
 

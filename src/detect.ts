@@ -57,7 +57,13 @@ export async function runDetect(args: string[]): Promise<void> {
   } catch (e) {
     throw new AiPipeError("E_VALIDATION", `detect: unparseable gh output (${errMsg(e)})`, 1);
   }
-  const items = isProjectList(projects) ? projects.projects : [];
+  // gh returns { projects: [...] }; keep only well-formed entries (drop any
+  // element missing title/number/id rather than rendering "undefined").
+  const rawItems =
+    typeof projects === "object" && projects !== null && Array.isArray((projects as { projects?: unknown }).projects)
+      ? ((projects as { projects: unknown[] }).projects)
+      : [];
+  const items = rawItems.filter(isProject);
 
   const outPath = join(target, ".claude", "shared", "github-project-ids.md");
   const lines = [
@@ -80,10 +86,12 @@ interface Project {
   number: number;
   id: string;
 }
-function isProjectList(v: unknown): v is { projects: Project[] } {
+function isProject(v: unknown): v is Project {
   return (
     typeof v === "object" &&
     v !== null &&
-    Array.isArray((v as { projects?: unknown }).projects)
+    typeof (v as Project).title === "string" &&
+    typeof (v as Project).number === "number" &&
+    typeof (v as Project).id === "string"
   );
 }

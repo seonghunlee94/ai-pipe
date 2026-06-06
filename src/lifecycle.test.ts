@@ -10,6 +10,7 @@ import { runMigrate } from "./conventions/migrate.js";
 import { runPipeline } from "./pipeline/commands.js";
 import { preflightChecks } from "./preflight.js";
 import { scanTemplate } from "./template-sync.js";
+import { runUpdate } from "./update.js";
 
 let dir: string;
 beforeEach(() => {
@@ -98,6 +99,48 @@ describe("runPipeline", () => {
     configDir();
     await expect(runPipeline(["get", "no.such.key", dir])).rejects.toMatchObject({ code: "E_BAD_USAGE" });
     await expect(runPipeline(["frobnicate"])).rejects.toMatchObject({ code: "E_BAD_USAGE" });
+  });
+
+  it("takes a value verbatim even when it starts with '-' (negative number)", async () => {
+    configDir();
+    await runPipeline(["set", "limits.min", "-5", dir]);
+    const local = JSON.parse(readFileSync(join(dir, ".claude", "config", "pipeline.local.json"), "utf8"));
+    expect(local.limits.min).toBe(-5);
+  });
+
+  it("blocks prototype-pollution segments (set throws, get returns not-found, proto intact)", async () => {
+    configDir();
+    await expect(runPipeline(["set", "__proto__.polluted", "true", dir])).rejects.toMatchObject({ code: "E_BAD_USAGE" });
+    expect(({} as Record<string, unknown>)["polluted"]).toBeUndefined();
+    await expect(runPipeline(["get", "__proto__", dir])).rejects.toMatchObject({ code: "E_BAD_USAGE" });
+    await expect(runPipeline(["get", "constructor", dir])).rejects.toMatchObject({ code: "E_BAD_USAGE" });
+  });
+});
+
+describe("runUpdate", () => {
+  it("dry-run reports drift without writing; --force applies and re-scan is clean", async () => {
+    await runInit([dir]);
+    const claude = join(dir, ".claude");
+    const pj = join(claude, "config", "pipeline.json");
+    writeFileSync(pj, "{}"); // drift the base config
+
+    await runUpdate([dir]); // dry-run
+    expect(readFileSync(pj, "utf8")).toBe("{}"); // not yet applied
+
+    await runUpdate([dir, "--force"]);
+    expect(scanTemplate(claude).filter((c) => c.status === "changed" || c.status === "new")).toEqual([]);
+  });
+
+  it("--force preserves a customized LOCAL file", async () => {
+    await runInit([dir]);
+    const settings = join(dir, ".claude", "rules", "project-settings.md");
+    writeFileSync(settings, "MY EDITS");
+    await runUpdate([dir, "--force"]);
+    expect(readFileSync(settings, "utf8")).toBe("MY EDITS");
+  });
+
+  it("throws when there is no .claude install", async () => {
+    await expect(runUpdate([join(dir, "nope")])).rejects.toMatchObject({ code: "E_BAD_USAGE" });
   });
 });
 

@@ -45,10 +45,17 @@ function configPaths(dir: string | undefined): { base: string; local: string } {
   return { base: join(cfg, "pipeline.json"), local: join(cfg, "pipeline.local.json") };
 }
 
+// Reject prototype-pollution segments and inherited-key traversal.
+const FORBIDDEN_SEGMENTS = new Set(["__proto__", "constructor", "prototype"]);
+function hasOwn(o: Record<string, unknown>, k: string): boolean {
+  return Object.prototype.hasOwnProperty.call(o, k);
+}
+
 function getPath(obj: Record<string, unknown>, dotKey: string): unknown {
   let cur: unknown = obj;
   for (const part of dotKey.split(".")) {
-    if (!isObject(cur) || !(part in cur)) return undefined;
+    if (FORBIDDEN_SEGMENTS.has(part)) return undefined;
+    if (!isObject(cur) || !hasOwn(cur, part)) return undefined;
     cur = cur[part];
   }
   return cur;
@@ -56,21 +63,29 @@ function getPath(obj: Record<string, unknown>, dotKey: string): unknown {
 
 function setPath(obj: Record<string, unknown>, dotKey: string, value: unknown): void {
   const parts = dotKey.split(".");
+  for (const p of parts) {
+    if (FORBIDDEN_SEGMENTS.has(p)) {
+      throw new AiPipeError("E_BAD_USAGE", `pipeline: forbidden key segment "${p}"`, 2);
+    }
+  }
   let cur = obj;
   for (let i = 0; i < parts.length - 1; i++) {
     const part = parts[i] as string;
-    if (!isObject(cur[part])) cur[part] = {};
+    // Descend only into an OWN object property; otherwise (missing, inherited,
+    // or a scalar intermediate) create a fresh own object — last-write-wins.
+    if (!hasOwn(cur, part) || !isObject(cur[part])) cur[part] = {};
     cur = cur[part] as Record<string, unknown>;
   }
   cur[parts[parts.length - 1] as string] = value;
 }
 
 export async function runPipeline(args: string[]): Promise<void> {
-  const positionals = args.filter((a) => !a.startsWith("-"));
-  const sub = positionals[0];
+  // pipeline takes no flags; read args positionally so a value may start with
+  // `-` (e.g. a negative number) without being mistaken for a flag.
+  const sub = args[0];
 
   if (sub === "show") {
-    const { base, local } = configPaths(positionals[1]);
+    const { base, local } = configPaths(args[1]);
     if (!existsSync(base)) {
       throw new AiPipeError("E_BAD_USAGE", `pipeline: no config at ${base} (run \`ai-pipe init\` first)`, 2);
     }
@@ -80,9 +95,9 @@ export async function runPipeline(args: string[]): Promise<void> {
   }
 
   if (sub === "get") {
-    const key = positionals[1];
+    const key = args[1];
     if (key === undefined) throw new AiPipeError("E_BAD_USAGE", "usage: ai-pipe pipeline get <key> [<dir>]", 2);
-    const { base, local } = configPaths(positionals[2]);
+    const { base, local } = configPaths(args[2]);
     const merged = deepMerge(readJson(base), readJson(local));
     const val = getPath(merged, key);
     if (val === undefined) throw new AiPipeError("E_BAD_USAGE", `pipeline: key not found: ${key}`, 2);
@@ -91,12 +106,12 @@ export async function runPipeline(args: string[]): Promise<void> {
   }
 
   if (sub === "set") {
-    const key = positionals[1];
-    const rawVal = positionals[2];
+    const key = args[1];
+    const rawVal = args[2];
     if (key === undefined || rawVal === undefined) {
       throw new AiPipeError("E_BAD_USAGE", "usage: ai-pipe pipeline set <key> <value> [<dir>]", 2);
     }
-    const { local } = configPaths(positionals[3]);
+    const { local } = configPaths(args[3]);
     // Parse the value as JSON when possible (numbers/booleans/objects), else string.
     let value: unknown;
     try {

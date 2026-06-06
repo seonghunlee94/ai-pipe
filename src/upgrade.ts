@@ -17,7 +17,20 @@ export async function runUpgrade(args: string[]): Promise<void> {
   const pkg = readPackageInfo();
   const version = readOptionValue(args, "--version") ?? "latest";
   const spec = `${pkg.name}@${version}`;
-  const target = resolveTargetDir(args.find((a) => !a.startsWith("--")));
+  // Positional dir = first non-flag arg, skipping the --version VALUE (so
+  // `upgrade --version 1.2.3 /proj` resolves /proj, not 1.2.3).
+  const positionals: string[] = [];
+  for (let i = 0; i < args.length; i++) {
+    const a = args[i];
+    if (a === undefined) continue;
+    if (a === "--version") {
+      i++; // skip its value
+      continue;
+    }
+    if (a.startsWith("-")) continue;
+    positionals.push(a);
+  }
+  const target = resolveTargetDir(positionals[0]);
 
   process.stdout.write(`upgrade: npm install -g ${spec}\n`);
   try {

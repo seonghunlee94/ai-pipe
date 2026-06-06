@@ -8,19 +8,15 @@
 //          orphaned files (template no longer ships them) are reported but left
 //          in place — update never deletes user content.
 
-import { copyFileSync, existsSync, mkdirSync, statSync, writeFileSync } from "node:fs";
+import { copyFileSync, mkdirSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 
-import { AiPipeError } from "./errors.js";
-import { scanTemplate, STATUS_GLYPH } from "./template-sync.js";
+import { requireInstall, scanTemplate, STATUS_GLYPH } from "./template-sync.js";
 import { hasFlag, readPackageInfo, resolveTargetDir, templateDir } from "./utils.js";
 
 export async function runUpdate(args: string[]): Promise<void> {
   const target = resolveTargetDir(args.find((a) => !a.startsWith("-")));
-  const claude = join(target, ".claude");
-  if (!existsSync(claude) || !statSync(claude).isDirectory()) {
-    throw new AiPipeError("E_BAD_USAGE", `update: no .claude/ install at ${target} (run \`ai-pipe init\` first)`, 2);
-  }
+  const claude = requireInstall(target);
   const force = hasFlag(args, "--force");
 
   const changes = scanTemplate(claude);
