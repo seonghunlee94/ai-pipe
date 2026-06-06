@@ -26,6 +26,13 @@ grep -rl 'your-org' . --include='*.json' --include='*.md' --include='*.ts' --inc
 
 대상 파일: `package.json`, `package-lock.json`, `.npmrc`, `README.md`, `.claude-plugin/marketplace.json`, `plugins/ai-pipe-core/plugin.json`, `plugins/ai-pipe-core/shared/schemas/*.json` ($id), `plugins/ai-pipe-core/shared/evals/*.schema.json` ($id), `src/init.ts` (안내 출력), `src/versions.ts` (주석). 치환 후 `npm run build`로 dist 재생성 필요. (`.github/workflows/publish.yml`은 org 무관 — GITHUB_TOKEN 기반.)
 
+### 퍼블리시 체크리스트 (공개/배포 시점에 순서대로)
+
+1. **라이선스 결정** — 현재 `UNLICENSED`(private, 의도된 상태). 공개 전 라이선스(MIT/Apache-2.0 등)를 **사용자가 직접 선택**해 `LICENSE` 파일 추가 + `package.json` `license` 갱신 (§7).
+2. **placeholder 치환** — 위 sed 스윕 실행 후 `node dist/cli.js validate . --strict` 로 잔여 `your-org/` 경고 0 확인.
+3. **§6 실증 라운드** — `/plugin marketplace add` + `/plugin install` 1회 실행으로 미확정 10건(특히 plugin.json 스키마·PreToolUse matcher 이름)을 확정. 결과에 따라 §3 매트릭스 수정.
+4. **버전·태그** — `package.json`/`plugin.json`/`marketplace.json` 버전 정렬 후 `git tag v<X.Y.Z>` push → publish workflow 가 `npm test` 게이트 통과 시 GitHub Packages 로 배포.
+
 ---
 
 ## 1. 아키텍처
@@ -125,7 +132,8 @@ MCP 연결이 없어도 project-ops 는 gh CLI 로 동작한다 (기능 동일, 
 | `skills/boundary-enforcement/SKILL.md` (paths 자동 활성화) | working | §6.1, §7.2 |
 | `skills/{pm-rules,backend-conventions}/SKILL.md` (paths 비활성 — 본문 채워질 때 활성화) | stub | §5.1, §6.1 |
 | `shared/schemas/impl-agent-input.schema.json`, `impl-agent-output.schema.json` | working | §11.1 |
-| `scripts/validate/*.sh` | stub | §10.2, §11.2 |
+| `scripts/validate/validate-impl-concordance.sh` (Concordance Gate — spec REQ-N vs impl `spec_tasks_covered`, 누락 시 exit 1) | working | §11.2 |
+| `scripts/validate/classify-error-recovery.sh` (실패 로그 → §8 분류 7종+UNKNOWN, retry=1/escalate=2) | working | §10.2 |
 | GitHub 작업 — `gh` CLI 경로 working / MCP 경로 미실증 (§6 item 6, `scripts/gh/` 는 PR3에서 폐기) | working* | §3.2 |
 | `bin/adp-watch` (이벤트 뷰어 `--replay`/`--cost`, 토큰/비용 집계) | working | §12.2 |
 | `skills/observability/SKILL.md` (paths 자동 활성화), `shared/evals/` (스키마 + 시드 1) | working | §12.1–12.3 |

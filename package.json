@@ -14,10 +14,11 @@
   "scripts": {
     "build": "tsc",
     "prepublishOnly": "npm run build",
-    "test": "npm run typecheck && npm run test:unit && npm run test:hooks",
+    "test": "npm run typecheck && npm run test:unit && npm run test:hooks && npm run test:scripts",
     "typecheck": "tsc --noEmit && tsc -p tsconfig.test.json",
     "test:unit": "vitest run",
-    "test:hooks": "bash test/hooks/run.sh"
+    "test:hooks": "bash test/hooks/run.sh",
+    "test:scripts": "bash test/scripts/run.sh"
   },
   "engines": {
     "node": ">=20"
