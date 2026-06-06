@@ -16,6 +16,7 @@ import {
   LOCAL_FILES,
 } from "./local-files.js";
 import { hasFlag, readPackageInfo, resolveTargetDir, templateDir } from "./utils.js";
+import { validateTree } from "./validate.js";
 
 // `ai-pipe init [targetDir] [--force]`
 //
@@ -59,6 +60,20 @@ export async function runInit(args: string[]): Promise<void> {
   writeFileSync(join(targetClaude, ".dev-pipe-version"), `${pkg.version}\n`, "utf8");
 
   patchGitignore(target);
+
+  // Post-write sanity check: confirm the install produced parseable files.
+  // Placeholders are EXPECTED right after init (the user fills them next), so
+  // that check is off here. A failure here signals a packaging bug, not user
+  // error — surface it as a warning without failing the otherwise-good install.
+  const problems = validateTree(targetClaude, { placeholders: false }).filter(
+    (p) => p.level === "error",
+  );
+  if (problems.length > 0) {
+    process.stderr.write(`\n⚠ post-init validation found ${problems.length} issue(s):\n`);
+    for (const p of problems) {
+      process.stderr.write(`  ${p.file}: ${p.message}\n`);
+    }
+  }
 
   printNextSteps(target, pkg.version);
 }

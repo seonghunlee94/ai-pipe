@@ -22,15 +22,18 @@ Usage:
   ai-pipe <command> [options]
 
 Commands:
-  init [<dir>] [--force]     Install .claude/ tree into <dir> (default: cwd)
-  version [--project <dir>]  Show CLI/project version and sync status
-  --version, -v              Print CLI version
-  --help, -h                 Show this help
+  init [<dir>] [--force]        Install .claude/ tree into <dir> (default: cwd)
+  version [--project <dir>]     Show CLI/project version and sync status
+  validate [<dir>] [--strict] [--quiet]
+                                Check a tree: JSON parses, hooks pass bash -n,
+                                agent/skill frontmatter, filled placeholders
+  --version, -v                 Print CLI version
+  --help, -h                    Show this help
 
 Not yet implemented (stubs — see src/ and spec §):
   update     §9.3   upgrade    §9.4   diff       §9.3
-  preflight  §13.3  detect     §3.2   validate   §11
-  pipeline   §8.1   versions   §9.1   migrate    §14
+  preflight  §13.3  detect     §3.2   versions   §9.1
+  pipeline   §8.1   migrate    §14
 `;
 
 // Single source of truth for command routing. Stub commands dispatch to their

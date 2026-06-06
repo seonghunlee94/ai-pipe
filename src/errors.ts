@@ -9,7 +9,8 @@ export type AiPipeErrorCode =
   | "E_VERSION_PARSE"
   | "E_VERSION_FILE_MISSING"
   | "E_NOT_IMPLEMENTED"
-  | "E_BAD_USAGE";
+  | "E_BAD_USAGE"
+  | "E_VALIDATION";
 
 export class AiPipeError extends Error {
   readonly code: AiPipeErrorCode;
