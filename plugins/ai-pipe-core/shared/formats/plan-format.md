@@ -29,7 +29,7 @@
 - covers: REQ-1, REQ-2
 - agent: backend-eng
 - acceptance: 이메일+비밀번호 검증, 실패 시 401, 성공 시 user 반환
-- expected_outputs (architect 의 설계-시점 예측 — 다음 task 가 받을 정보): { "endpoints": ["POST /api/login"], "entities": ["User"] }
+- expected_outputs (architect 의 설계-시점 예측 — 참고용. 런타임에 실제로 다음 task 에 전달되는 건 직전 task 의 *output* `downstream_notes` 이지 이 값이 아니다): { "endpoints": ["POST /api/login"], "entities": ["User"] }
 
 ### T-2 — JWT 토큰 발급
 - covers: REQ-3
@@ -61,7 +61,7 @@
 1. **task_id**: `T-<n>`, 1 부터 연속. impl-agent-input/output 스키마의 `^T-[0-9]+$` 와 일치.
 2. **agent**: `backend-eng` | `frontend-eng` | `infra-eng` 중 하나 (impl 에이전트만). 비-impl 작업(리뷰/QA)은 plan 에 task 로 넣지 않는다 — execute-plan 이후 단계에서 처리.
 3. **task_branch**: 기본 `task/{slug}-{n}-{kebab-title}`. GitHub 연동(project-ops Phase 1/2) 이 활성화되면 issue 번호를 포함한 `task/{short}-{issue}-{n}-{title}` (pipeline.json `task_branch_pattern`) 으로 재명명될 수 있다. 로컬 단독 실행에서는 slug 기반 이름을 그대로 쓴다.
-4. **feature_branch**: 기본 `feat/{slug}`. 모든 task_branch 의 base.
+4. **feature_branch**: 기본 `feat/{slug}`. 모든 task_branch 의 base. execute-plan 이 `vcs.default_branch` 에서 멱등 생성한다. GitHub 연동이 활성이면 task_branch 와 마찬가지로 issue 번호를 포함한 `feat/{short}-{issue}-{title}`(pipeline.json `feature_branch_pattern`)로 project-ops 가 재명명할 수 있다.
 5. **depends_on**: 쉼표 구분 task_id 목록, 없으면 `-`. 순환 금지 (DAG). execute-plan 이 위상 정렬해 의존 없는 task 부터 fan-out.
 6. **covers**: 이 task 가 구현하는 REQ-N 목록. 모든 REQ 가 Coverage 표에서 ≥1 task 로 커버돼야 한다 — 누락 시 architect 는 plan 을 내지 말고 `DESIGN_GAP` 으로 escalate.
 7. **story_number / issue_number**: plan 에는 없다. execute-plan 이 실행 시점에 GitHub Phase(있으면) 또는 로컬 기본값으로 바인딩해 impl-agent-input 을 완성한다.
