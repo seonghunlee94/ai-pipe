@@ -149,6 +149,20 @@ PreToolUse 차단 훅 6종(verify-boundary, verify-git-safety, validate-commit-m
 
 테스트 백로그(향후): vitest coverage threshold, linter(ESLint/Biome) + CI lint, CI Node 매트릭스(20/22), validate EACCES/symlink 가드 테스트. (DEV-NICE 단계에서 판단 후 진행)
 
+### 파이프라인 실행 (end-to-end)
+
+플러그인 설치 후, Claude Code 안에서 슬래시 명령 체인으로 한 기능을 spec→plan→구현까지 흘린다:
+
+```
+/create-spec 사용자 인증 기능을 만들어줘   # PM → .artifacts/specs/{slug}-spec.md, slug 보고
+/design-plan {slug}                        # architect → .artifacts/plans/{slug}-plan.md (task DAG)
+/execute-plan {slug}                       # feat/{slug} 멱등 생성 → impl 에이전트 fan-out → 직렬 merge
+```
+
+- 산출물은 `.artifacts/`(specs/plans/runs) 아래에 떨어진다. 실행 이벤트는 `.artifacts/runs/{slug}-events.jsonl`, 진행/비용은 `${CLAUDE_PLUGIN_DIR}/bin/adp-watch {slug}`.
+- 로컬 단독(GitHub 미연동) 실행은 `config/pipeline.json` 의 `local_defaults`(story/issue=1)로 impl-agent-input 을 채운다. GitHub Issues/Projects 연동은 project-ops 에이전트가 담당.
+- 현재 impl 에이전트는 **backend-eng 만 완성** — frontend/infra-eng 가 필요한 plan 은 execute-plan 이 "미구현"으로 멈춘다 (DEV5 예정).
+
 ---
 
 ## 4. 로드맵

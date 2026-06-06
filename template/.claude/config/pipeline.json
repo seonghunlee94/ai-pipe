@@ -27,6 +27,12 @@
     "task_branch_pattern": "task/{short}-{issue}-{n}-{title}",
     "feature_branch_pattern": "feat/{short}-{issue}-{title}"
   },
+  "local_defaults": {
+    "$comment": "Used by execute-plan when running a plan WITHOUT a GitHub story/issue (local single-machine run), to complete the impl-agent-input schema (story_number/issue_number require >=1).",
+    "story_number": 1,
+    "issue_number": 1,
+    "short_name": "local"
+  },
   "review": {
     "depth": "standard"
   }

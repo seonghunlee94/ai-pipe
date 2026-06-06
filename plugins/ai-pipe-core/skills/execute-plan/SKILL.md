@@ -20,8 +20,10 @@ allowed-tools:
 
 ## 절차 (Claude가 직접 수행 — 자체 DAG runtime 없음)
 
-1. **Plan 파싱**: `.artifacts/plans/{slug}-plan.md` 의 `## Tasks` 표에서 task 목록과 의존성을 읽는다 — 표 구조는 `${CLAUDE_PLUGIN_DIR}/shared/formats/plan-format.md`(SSOT)를 따른다. 각 task 는 `task_id`, `agent`(backend-eng/frontend-eng/infra-eng), `task_branch`, `depends_on`, `covers` 를 가진다. `story_number`/`issue_number` 는 plan 에 없으므로 실행 시점에 바인딩한다 (GitHub Phase 가 활성이면 그 issue 번호, 로컬 단독 실행이면 기본값) — impl-agent-input 스키마를 완성해 에이전트에 전달.
-2. **Base 브랜치 보장**: fan-out 전에 메인 세션이 `feature_branch` 를 checkout 한 상태인지 확인한다 — native worktree 는 현재 HEAD 에서 분기하므로, main 에 있으면 task 들이 잘못된 base 에서 시작한다.
+1. **Plan 파싱**: `.artifacts/plans/{slug}-plan.md` 에서 plan 헤더의 `feature_branch` 와 `## Tasks` 표를 읽는다 — 표 구조는 `${CLAUDE_PLUGIN_DIR}/shared/formats/plan-format.md`(SSOT)를 따른다. 각 task 는 `task_id`, `agent`(backend-eng/frontend-eng/infra-eng), `task_branch`, `depends_on`, `covers` 를 가진다.
+   - **stub 에이전트 경고**: 배정된 `agent` 의 정의 파일(`${CLAUDE_PLUGIN_DIR}/agents/{agent}.md`)이 stub(빈 `tools: []` / TODO 본문)이면 — 현재 `frontend-eng`/`infra-eng` 가 그렇다 (DEV5 예정) — 그 task 로 fan-out 하지 말고 사용자에게 "해당 에이전트 미구현"을 보고하고 멈춘다. 빈 에이전트에 보내면 무의미한 실패→retry 루프만 생긴다.
+   - **런타임 바인딩**: `story_number`/`issue_number`/`short_name` 은 plan 에 없으므로 실행 시점에 바인딩해 impl-agent-input 스키마를 완성한다 — GitHub Phase 가 활성이면 그 issue/story 번호를, 로컬 단독 실행이면 `config/pipeline.json` 의 `local_defaults`(기본 `story_number=1`, `issue_number=1`, `short_name="local"`)를 사용한다.
+2. **Base 브랜치 보장 (멱등 생성)**: fan-out 전에 메인 세션이 `feature_branch` 를 checkout 한 상태로 만든다 — native worktree 는 현재 HEAD 에서 분기하므로, 잘못된 base(예: main)에 있으면 task 들이 어긋난다. plan 의 task 들은 `feature_branch` 를 base 로 분기하지만 **이 브랜치를 만드는 단계는 아무도 없으므로 여기서 멱등 생성**한다: `git rev-parse --verify --quiet refs/heads/${feature_branch}` 로 존재 확인 → 없으면 `git checkout -b ${feature_branch}` (현재 base 에서 분기), 있으면 `git checkout ${feature_branch}`.
 3. **위상 정렬**: 의존성이 없는 task 들을 같은 그룹으로 묶는다 (spec §4.2 패턴 B).
 4. **Fan-out**: 같은 그룹의 task 들을 `Agent` tool 로 병렬 호출. impl 에이전트들은 frontmatter 의 `isolation: worktree` 에 의해 하네스가 자동으로 격리된 worktree 에서 실행한다 — worktree **생성**은 항상 하네스 몫이고 이 skill 은 생성하지 않는다 (잔존물 **정리**는 step 6/8 에서 오케스트레이터가 수행).
 5. **Fan-in (직렬 merge)**: 그룹의 모든 task 가 끝나면 각 task 브랜치를 feature 브랜치에 **직렬로** merge 한다 (동시 merge 금지 — race condition 방지, spec §3.3).

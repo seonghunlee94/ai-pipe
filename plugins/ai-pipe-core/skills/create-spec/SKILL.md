@@ -17,11 +17,11 @@ allowed-tools:
 ## 절차
 
 1. 사용자의 메시지(`$ARGUMENTS`)를 그대로 PM 에이전트에 위임한다 (`Agent` tool, `subagent_type: pm`).
-2. PM 의 출력 JSON 에서 `spec_path` 와 `req_ids` 를 추출.
+2. PM 의 출력 JSON 에서 `slug`, `spec_path`, `req_ids` 를 추출.
 3. 사용자에게 다음을 보고:
-   - 생성된 spec 파일 경로
+   - 생성된 spec 파일 경로와 `slug`
    - 요구사항 개수 및 ID 목록
-   - 다음 단계 안내: `/design-plan <slug>`
+   - 다음 단계 안내: `/design-plan {slug}` (위에서 보고한 slug 를 그대로 넣어 안내)
 
 ## 금지 사항
 

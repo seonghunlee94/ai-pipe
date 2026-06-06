@@ -2,7 +2,7 @@
 
 `.artifacts/plans/{slug}-plan.md` 의 정규 구조. **producer** 는 `architect` 에이전트, **consumer** 는 `execute-plan` skill. 양쪽이 이 문서를 단일 진실 원천으로 따른다. spec §4.2 패턴 A, §4.4.
 
-`## Tasks` 표가 기계 판독용 SSOT 다 — execute-plan 은 이 표에서 task_id / agent / task_branch / depends_on 를 읽는다. 나머지 섹션은 사람과 impl 에이전트를 위한 컨텍스트.
+`## Tasks` 표가 기계 판독용 SSOT 다 — execute-plan 은 이 표에서 task_id / agent / task_branch / depends_on / covers 와, plan 헤더의 feature_branch 를 읽는다. 나머지 섹션은 사람과 impl 에이전트를 위한 컨텍스트.
 
 ---
 
@@ -29,13 +29,13 @@
 - covers: REQ-1, REQ-2
 - agent: backend-eng
 - acceptance: 이메일+비밀번호 검증, 실패 시 401, 성공 시 user 반환
-- downstream_notes (이 task 가 다음에 넘길 것): { "endpoints": ["POST /api/login"], "entities": ["User"] }
+- expected_outputs (architect 의 설계-시점 예측 — 다음 task 가 받을 정보): { "endpoints": ["POST /api/login"], "entities": ["User"] }
 
 ### T-2 — JWT 토큰 발급
 - covers: REQ-3
 - depends_on: T-1
 - acceptance: 로그인 성공 시 access token 발급, 만료 15분
-- downstream_notes: { "endpoints": ["POST /api/login"], "token": "access+refresh" }
+- expected_outputs: { "endpoints": ["POST /api/token/refresh"], "token": "access+refresh" }
 
 ### T-3 — 로그인 폼
 - covers: REQ-4
