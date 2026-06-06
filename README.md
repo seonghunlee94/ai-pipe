@@ -24,7 +24,7 @@ grep -rl 'your-org' . --include='*.json' --include='*.md' --include='*.ts' --inc
   | xargs sed -i 's/your-org/YOUR_REAL_ORG/g'
 ```
 
-대상 파일: `package.json`, `package-lock.json`, `.npmrc`, `README.md`, `.claude-plugin/marketplace.json`, `plugins/ai-pipe-core/plugin.json`, `plugins/ai-pipe-core/shared/schemas/*.json` ($id), `plugins/ai-pipe-core/shared/evals/*.schema.json` ($id), `src/init.ts` (안내 출력), `src/versions.ts` (주석). 치환 후 `npm run build`로 dist 재생성 필요. (`.github/workflows/publish.yml`은 org 무관 — GITHUB_TOKEN 기반.)
+대상 파일: `package.json`, `package-lock.json`, `.npmrc`, `README.md`, `.claude-plugin/marketplace.json`, `plugins/ai-pipe-core/plugin.json`, `plugins/ai-pipe-core/shared/schemas/*.json` ($id), `plugins/ai-pipe-core/shared/evals/*.schema.json` ($id), `src/init.ts` (안내 출력), `src/versions.ts` (주석 + 안내 출력), `src/validate.ts` (주석만 — 탐지기는 아래 주의 참조). 치환 후 `npm run build`로 dist 재생성 필요. (`.github/workflows/publish.yml`은 org 무관 — GITHUB_TOKEN 기반.)
 
 > **주의**: `src/validate.ts` 의 placeholder **탐지기**와 `src/validate.test.ts` 의 픽스처는 리터럴을 분리(`"your-" + "org/"`)해 두어 이 스윕이 건드리지 못한다 — 탐지기가 함께 치환되면 사용자의 실제 org 가 영구 오탐이 되고 아래 체크리스트 2단계가 통과 불가능해진다. 단일 리터럴로 합치지 말 것.
 
