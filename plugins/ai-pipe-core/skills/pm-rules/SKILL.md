@@ -4,7 +4,7 @@ description: |
   Project-Manager-specific spec writing rules (REQ-N decomposition, Goals
   vs Non-Goals separation, user-story templates, acceptance criteria
   patterns). Status: STUB — paths auto-activation is intentionally
-  disabled until real content lands (PR3+). Planned paths:
+  disabled until real content lands (v2.0/실사용 후). Planned paths:
   .artifacts/specs/*-spec.md.
 disable-model-invocation: true
 user-invocable: false
@@ -12,7 +12,7 @@ user-invocable: false
 
 # pm-rules
 
-TODO: PR3+. PM 에이전트가 spec을 작성할 때 따라야 할 세부 규칙:
+TODO: v2.0/실사용 후. PM 에이전트가 spec을 작성할 때 따라야 할 세부 규칙:
 
 - REQ-N 분해 패턴 (입력/출력/제약 형식)
 - Goals vs Non-Goals 명시

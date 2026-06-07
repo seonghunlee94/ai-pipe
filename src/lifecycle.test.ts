@@ -12,6 +12,8 @@ import { deepMerge, runPipeline } from "./pipeline/commands.js";
 import { preflightChecks } from "./preflight.js";
 import { scanTemplate } from "./template-sync.js";
 import { runUpdate } from "./update.js";
+import { runUpgrade } from "./upgrade.js";
+import { runVersion } from "./version.js";
 
 let dir: string;
 beforeEach(() => {
@@ -167,6 +169,20 @@ describe("runDiff", () => {
   it("throws when there is no .claude install (message keeps the command prefix)", async () => {
     await expect(runDiff([join(dir, "nope")])).rejects.toMatchObject({ code: "E_BAD_USAGE" });
     await expect(runDiff([join(dir, "nope")])).rejects.toThrow(/^diff:/);
+  });
+});
+
+describe("loudness guards (surplus positionals / empty valued flags)", () => {
+  it("init/diff/update/upgrade reject surplus positionals with usage", async () => {
+    await expect(runInit(["a", "b"])).rejects.toMatchObject({ code: "E_BAD_USAGE" });
+    await expect(runDiff(["a", "b"])).rejects.toMatchObject({ code: "E_BAD_USAGE" });
+    await expect(runUpdate(["a", "b"])).rejects.toMatchObject({ code: "E_BAD_USAGE" });
+    // upgrade's guard fires BEFORE the global npm install side effect.
+    await expect(runUpgrade(["a", "b"])).rejects.toMatchObject({ code: "E_BAD_USAGE" });
+  });
+  it("version rejects an empty --project= instead of silently using cwd", async () => {
+    await expect(runVersion(["--project="])).rejects.toMatchObject({ code: "E_BAD_USAGE" });
+    await expect(runVersion(["stray"])).rejects.toMatchObject({ code: "E_BAD_USAGE" });
   });
 });
 

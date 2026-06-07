@@ -43,10 +43,9 @@ Commands:
   --help, -h                    Show this help
 `;
 
-// Single source of truth for command routing. Stub commands dispatch to their
-// own files, which throw AiPipeError(E_NOT_IMPLEMENTED, ..., 2). This keeps
-// the "not implemented" message in one place per command and lets future PRs
-// flesh out the stub by editing only its own file.
+// Single source of truth for command routing. Every command lives in its own
+// file (all 12 are implemented as of DEV6); adding a command = one file + one
+// entry here + a HELP line.
 const COMMANDS: Record<string, (args: string[]) => Promise<void>> = {
   init: runInit,
   version: runVersion,

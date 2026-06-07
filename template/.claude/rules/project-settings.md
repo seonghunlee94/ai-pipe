@@ -37,4 +37,4 @@
 ## GitHub Project (V2)
 
 - 보드 번호: {{PROJECT_NUMBER}}   <!-- `gh project list --owner {{ORG}}` -->
-- 상세 매핑은 `ai-pipe detect` 가 `shared/github-project-ids.md` 에 기록 (구현 예정)
+- 상세 매핑은 `ai-pipe detect` 가 `shared/github-project-ids.md` 에 기록

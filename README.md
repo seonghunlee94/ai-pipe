@@ -204,7 +204,7 @@ PreToolUse 차단 훅 6종(verify-boundary, verify-git-safety, validate-commit-m
 ```bash
 git clone https://github.com/your-org/ai-pipe.git
 cd ai-pipe
-npm install         # TypeScript devDep 2개만 (런타임 의존성 0)
+npm install         # devDep 4개만 — typescript/@types/node/vitest/biome (런타임 의존성 0)
 npm run build       # tsc → dist/
 node dist/cli.js init /tmp/test-target   # 부트스트랩 동작 확인
 ```

@@ -20,6 +20,9 @@ export async function runUpgrade(args: string[]): Promise<void> {
   // rejected here — a silent @latest install would be a surprising global
   // side effect.
   const { values, positionals } = parseCommandArgs("upgrade", args, { version: { type: "string" } });
+  if (positionals.length > 1) {
+    throw new AiPipeError("E_BAD_USAGE", "usage: ai-pipe upgrade [--version X.Y.Z] [<dir>]", 2);
+  }
   let version = "latest";
   const v = values.version;
   if (v !== undefined) {

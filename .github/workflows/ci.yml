@@ -1,6 +1,7 @@
 name: CI
 
-# Build + typecheck + unit tests + hook harness on every push/PR.
+# Build + lint + typecheck + unit tests + hook/script harnesses on every push/PR
+# (the exact layers are the package.json `test` chain — runner output is SSOT).
 on:
   push:
     branches: [main]

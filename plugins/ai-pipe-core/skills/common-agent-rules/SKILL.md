@@ -63,7 +63,7 @@ user-invocable: false
 
 ## 7. Cost & Caching
 
-- 가능하면 SSOT 문서를 prompt 앞부분에 위치시켜 prompt cache hit rate를 최대화한다. (PR6에서 cache_control breakpoint 자동화 예정.)
+- 가능하면 SSOT 문서를 prompt 앞부분에 위치시켜 prompt cache hit rate를 최대화한다. (cache_control breakpoint 적용 수단은 README §6 실증 라운드에서 확정 — 전략은 `observability` skill §3 이 SSOT.)
 - 한 task의 컨텍스트가 비대해지면 task를 분할한다 (`CONTEXT_EXHAUSTED` — 스펙 §10.1).
 
 ## 8. Escalation

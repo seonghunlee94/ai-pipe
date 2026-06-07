@@ -8,6 +8,9 @@ export type AiPipeErrorCode =
   | "E_TEMPLATE_MISSING"
   | "E_VERSION_PARSE"
   | "E_VERSION_FILE_MISSING"
+  // E_NOT_IMPLEMENTED is currently producer-less (all 12 commands shipped in
+  // DEV6) — kept as a reserved code for future stubs rather than churning the
+  // union on every roadmap phase.
   | "E_NOT_IMPLEMENTED"
   | "E_BAD_USAGE"
   | "E_VALIDATION"
