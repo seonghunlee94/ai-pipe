@@ -45,8 +45,16 @@ function parseSemver(v: string): Semver {
 }
 
 export async function runVersion(args: string[]): Promise<void> {
-  const { values } = parseCommandArgs("version", args, { project: { type: "string" } });
+  const { values, positionals } = parseCommandArgs("version", args, { project: { type: "string" } });
+  if (positionals.length > 0) {
+    throw new AiPipeError("E_BAD_USAGE", "usage: ai-pipe version [--project <dir>]", 2);
+  }
   const projectVal = values.project;
+  // Same guard discipline as eval/upgrade: an empty `--project=` or a value
+  // that is actually the next flag must not silently fall back to cwd.
+  if (projectVal !== undefined && (typeof projectVal !== "string" || projectVal === "" || projectVal.startsWith("-"))) {
+    throw new AiPipeError("E_BAD_USAGE", "version: --project requires a directory", 2);
+  }
   const projectPath = typeof projectVal === "string" ? projectVal : undefined;
   const target = resolveTargetDir(projectPath);
   const versionFile = join(target, ".claude", ".dev-pipe-version");

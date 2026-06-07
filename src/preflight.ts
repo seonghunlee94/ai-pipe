@@ -6,7 +6,7 @@
 import { execFileSync } from "node:child_process";
 
 import { AiPipeError } from "./errors.js";
-import { errMsg } from "./utils.js";
+import { errMsg, parseCommandArgs } from "./utils.js";
 
 export interface ToolCheck {
   readonly name: string;
@@ -55,7 +55,11 @@ export function preflightChecks(): ToolCheck[] {
   return checks;
 }
 
-export async function runPreflight(_args: string[]): Promise<void> {
+export async function runPreflight(args: string[]): Promise<void> {
+  const { positionals } = parseCommandArgs("preflight", args, {});
+  if (positionals.length > 0) {
+    throw new AiPipeError("E_BAD_USAGE", "usage: ai-pipe preflight", 2);
+  }
   let checks: ToolCheck[];
   try {
     checks = preflightChecks();

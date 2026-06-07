@@ -6,6 +6,7 @@
 // a forward-compatible no-op: it reports "no migrations" and exits 0 rather than
 // throwing, so scripts/CI can call it unconditionally.
 
+import { AiPipeError } from "../errors.js";
 import { parseCommandArgs, resolveTargetDir } from "../utils.js";
 
 export interface Migration {
@@ -20,6 +21,9 @@ export const MIGRATIONS: readonly Migration[] = [];
 
 export async function runMigrate(args: string[]): Promise<void> {
   const { positionals } = parseCommandArgs("migrate", args, {});
+  if (positionals.length > 1) {
+    throw new AiPipeError("E_BAD_USAGE", "usage: ai-pipe migrate [<dir>]", 2);
+  }
   const target = resolveTargetDir(positionals[0]);
   if (MIGRATIONS.length === 0) {
     process.stdout.write("migrate: no migrations defined for this version — nothing to do\n");

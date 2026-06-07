@@ -6,9 +6,14 @@
 
 import { execFileSync } from "node:child_process";
 
-import { errMsg, readPackageInfo } from "./utils.js";
+import { AiPipeError } from "./errors.js";
+import { errMsg, parseCommandArgs, readPackageInfo } from "./utils.js";
 
-export async function runVersions(_args: string[]): Promise<void> {
+export async function runVersions(args: string[]): Promise<void> {
+  const { positionals } = parseCommandArgs("versions", args, {});
+  if (positionals.length > 0) {
+    throw new AiPipeError("E_BAD_USAGE", "usage: ai-pipe versions", 2);
+  }
   const pkg = readPackageInfo();
   process.stdout.write(`CLI (this install): ${pkg.version}\n`);
 

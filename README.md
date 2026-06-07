@@ -2,7 +2,7 @@
 
 Claude Code 기반 멀티 에이전트 자동화 파이프라인. **Claude Code Plugin Marketplace**로 배포하여 다양한 프로젝트·머신에서 공유 가능하고, 프로젝트별 설정과 GitHub Issues/Projects V2 연동을 지원한다.
 
-> **현재 상태: DEV1–7 아크 완료 (퍼블리시 준비 단계)**. 12개 에이전트 전부 정의, spec→plan→execute 파이프라인 척추 연결, PreToolUse 6종 + SessionStart/Stop 훅, CLI 12개 명령(init/version/validate/eval + 라이프사이클 8종), Concordance Gate·오류 분류기, 4-레이어 테스트 스위트(typecheck/vitest/훅·스크립트 하네스) + CI. 남은 것: §0 퍼블리시 체크리스트(라이선스 선택·§6 실증 라운드는 사용자 소유). 자세한 설계는 [`multi-agent-pipeline-best-practices.md`](./multi-agent-pipeline-best-practices.md).
+> **현재 상태: DEV1–7 아크 완료 (퍼블리시 준비 단계)**. 12개 에이전트 전부 정의, spec→plan→execute 파이프라인 척추 연결, PreToolUse 6종 + SessionStart/Stop 훅, CLI 12개 명령(init/version/validate/eval + 라이프사이클 8종), Concordance Gate·오류 분류기, 5-레이어 테스트 스위트(lint/typecheck/vitest/훅·스크립트 하네스) + CI. 남은 것: §0 퍼블리시 체크리스트(라이선스 선택·§6 실증 라운드는 사용자 소유). 자세한 설계는 [`multi-agent-pipeline-best-practices.md`](./multi-agent-pipeline-best-practices.md).
 
 ---
 
@@ -164,7 +164,7 @@ MCP 연결이 없어도 project-ops 는 gh CLI 로 동작한다 (기능 동일, 
 
 PreToolUse 차단 훅 6종(verify-boundary, verify-git-safety, validate-commit-msg, ban-background, validate-subagent-type, secrets-scan)은 Claude Code 규약(2 = block)을 따르고, lifecycle 훅 2종(session-start, stop-checkpoint)은 best-effort 로 항상 exit 0 (세션을 막지 않음). 하네스는 각 차단 훅의 block/allow 케이스를 jq 페이로드로 검증한다.
 
-테스트 백로그(향후): vitest coverage threshold, linter(ESLint/Biome) + CI lint, CI Node 매트릭스(20/22), validate EACCES/symlink 가드 테스트. (DEV-NICE 단계에서 판단 후 진행)
+테스트 백로그(향후): vitest coverage threshold, CI Node 매트릭스(20/22), validate EACCES/symlink 가드 테스트. (DEV-NICE 판단에서 SKIP — linter 는 Biome 게이트로 출하됨)
 
 ### 파이프라인 실행 (end-to-end)
 

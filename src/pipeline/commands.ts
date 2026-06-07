@@ -59,7 +59,7 @@ function configPaths(dir: string | undefined): { base: string; local: string } {
 // Reject prototype-pollution segments and inherited-key traversal.
 const FORBIDDEN_SEGMENTS = new Set(["__proto__", "constructor", "prototype"]);
 function hasOwn(o: Record<string, unknown>, k: string): boolean {
-  return  Object.hasOwn(o, k);
+  return Object.hasOwn(o, k);
 }
 
 function getPath(obj: Record<string, unknown>, dotKey: string): unknown {

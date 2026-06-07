@@ -11,11 +11,15 @@
 import { copyFileSync, mkdirSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 
+import { AiPipeError } from "./errors.js";
 import { requireInstall, scanTemplate, STATUS_GLYPH } from "./template-sync.js";
 import { parseCommandArgs, readPackageInfo, resolveTargetDir, templateDir } from "./utils.js";
 
 export async function runUpdate(args: string[]): Promise<void> {
   const { values, positionals } = parseCommandArgs("update", args, { force: { type: "boolean" } });
+  if (positionals.length > 1) {
+    throw new AiPipeError("E_BAD_USAGE", "usage: ai-pipe update [<dir>] [--force]", 2);
+  }
   const target = resolveTargetDir(positionals[0]);
   const claude = requireInstall(target, "update");
   const force = values.force === true;

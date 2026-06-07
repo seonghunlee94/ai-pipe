@@ -98,7 +98,9 @@ STDIN=$'FAIL\texample.com/pkg\t0.123s' \
 # demands "keep the two in sync" — assert it BOTH ways so adding/renaming a
 # category in either place fails here instead of drifting silently.
 SKILL="$REPO_ROOT/plugins/ai-pipe-core/skills/common-agent-rules/SKILL.md"
-SKILL_CATS=$(sed -n '/^## 8/,/^## 9/p' "$SKILL" | grep -oE '`[A-Z][A-Z_]{3,}`' | tr -d '\`' | sort -u)
+# Anchor extraction to TABLE FIRST-COLUMNS (`| \`CAT\``) so a benign backticked
+# ALL-CAPS word in §8 prose (e.g. `JSON`, `SSOT`) can't false-positive.
+SKILL_CATS=$(sed -n '/^## 8/,/^## 9/p' "$SKILL" | grep -E '^\| `[A-Z][A-Z_]{3,}`' | grep -oE '`[A-Z][A-Z_]{3,}`' | tr -d '\`' | grep -v '^UNKNOWN$' | sort -u)
 EMIT_CATS=$(grep -oE 'emit [A-Z][A-Z_]{3,}' "$K" | awk '{print $2}' | grep -v '^UNKNOWN$' | sort -u)
 if [[ -n "$SKILL_CATS" && "$SKILL_CATS" == "$EMIT_CATS" ]]; then
   PASS=$((PASS + 1))

@@ -30,6 +30,9 @@ import { validateTree } from "./validate.js";
 
 export async function runInit(args: string[]): Promise<void> {
   const { values, positionals } = parseCommandArgs("init", args, { force: { type: "boolean" } });
+  if (positionals.length > 1) {
+    throw new AiPipeError("E_BAD_USAGE", "usage: ai-pipe init [<dir>] [--force]", 2);
+  }
   const force = values.force === true;
   const target = resolveTargetDir(positionals[0]);
   const targetClaude = join(target, ".claude");

@@ -81,11 +81,11 @@
 - CLI의 복잡도가 라이브러리 도입을 정당화할 만큼 높지 않은 경우가 대부분이다
 
 ```typescript
-// 좋은 예: 직접 파서
-function readOptionValue(args: string[], flag: string): string | undefined {
-  const idx = args.indexOf(flag);
-  return idx !== -1 ? args[idx + 1] : undefined;
-}
+// 좋은 예 (개정): Node 표준 내장 파서 — 외부 의존성 0 으로 valued flag /
+// =form / 미지 플래그 거부까지 처리. (초기 버전이 권장했던 손파서
+// readOptionValue 는 valued flag 의 값을 positional 로 오인하는 버그
+// 클래스를 낳아 폐기 — ai-pipe DEV-NICE N15 참조.)
+import { parseArgs } from "node:util";
 
 // 나쁜 예: 무거운 라이브러리 도입
 import { Command } from 'commander';

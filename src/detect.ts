@@ -26,6 +26,9 @@ export function parseOrg(settingsMd: string): string | null {
 
 export async function runDetect(args: string[]): Promise<void> {
   const { positionals } = parseCommandArgs("detect", args, {});
+  if (positionals.length > 1) {
+    throw new AiPipeError("E_BAD_USAGE", "usage: ai-pipe detect [<dir>]", 2);
+  }
   const target = resolveTargetDir(positionals[0]);
   const settingsPath = join(target, ".claude", "rules", "project-settings.md");
   if (!existsSync(settingsPath)) {
