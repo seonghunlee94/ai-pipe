@@ -121,5 +121,27 @@ check "block basic-auth"    secrets-scan.sh 2 "$(p_sbash 'curl -u admin:hunter2p
 check "allow env auth"      secrets-scan.sh 0 "$(p_sbash 'curl -H "Authorization: Bearer $TOKEN" https://x')"
 check "allow plain content" secrets-scan.sh 0 "$(p_swrite "const x = 1; // nothing secret here")"
 
+# --- hooks.json wiring integrity ---
+# hooks.json must parse, and every ${CLAUDE_PLUGIN_ROOT}/hooks/*.sh it
+# references must exist and be executable — catches future wiring drift
+# (renamed scripts, a DIR/ROOT-style variable regression) at test time.
+WIRING_OK=1
+if ! jq empty "$HOOKS/hooks.json" 2>/dev/null; then
+  WIRING_OK=0
+  echo "FAIL  hooks.json does not parse"
+else
+  while IFS= read -r cmd; do
+    script="${cmd//\$\{CLAUDE_PLUGIN_ROOT\}/$CLAUDE_PLUGIN_ROOT}"
+    if [[ "$script" == *'${'* ]]; then
+      WIRING_OK=0
+      echo "FAIL  hooks.json command uses an unknown variable: $cmd"
+    elif [[ ! -x "$script" ]]; then
+      WIRING_OK=0
+      echo "FAIL  hooks.json references a missing/non-executable script: $cmd"
+    fi
+  done < <(jq -r '.hooks[][] .hooks[].command' "$HOOKS/hooks.json")
+fi
+if [[ "$WIRING_OK" == 1 ]]; then PASS=$((PASS + 1)); else FAIL=$((FAIL + 1)); fi
+
 echo "── hook harness: $PASS passed, $FAIL failed ──"
 [[ "$FAIL" == 0 ]]

@@ -32,7 +32,7 @@ grep -rl 'your-org' . --include='*.json' --include='*.md' --include='*.ts' --inc
 
 1. **라이선스 결정** — 현재 `UNLICENSED`(private, 의도된 상태). 공개 전 라이선스(MIT/Apache-2.0 등)를 **사용자가 직접 선택**해 `LICENSE` 파일 추가 + `package.json` `license` 갱신 (§7).
 2. **placeholder 치환** — 위 sed 스윕 실행 → `npm run build`(dist 재생성) → `node dist/cli.js validate . --strict` 로 잔여 `your-org/` 경고 0 확인.
-3. ~~**§6 실증 라운드**~~ — **완료 (2026-06-11)**: `claude plugin marketplace add` + `install` 실행으로 미확정 10건 중 8건 확정·4건 수정 (§6 결과 참조). 잔여 2건(adp-watch PATH, usage 페이로드)은 실사용 라운드로 이월.
+3. ~~**§6 실증 라운드**~~ — **완료 (2026-06-11)**: `claude plugin marketplace add` + `install` 실행으로 원래 10건 중 8건 판정(확정 4·수정 4) + 신규 1건(owner) 수정 (§6 결과 참조). 잔여 2건(adp-watch PATH, usage 페이로드)은 실사용 라운드로 이월.
 4. **버전·태그** — `package.json`/`plugin.json`/`marketplace.json` 버전 정렬 후 `git tag v<X.Y.Z>` push → publish workflow 가 `npm test` 게이트 통과 시 GitHub Packages 로 배포.
 
 ---
@@ -99,7 +99,7 @@ $EDITOR .claude/config/pipeline.json        # 재시도 한도, 브랜치 패턴
 gh auth login                                # project-ops 의 gh CLI 인증 (Projects V2 mutation 에 필수)
 ```
 
-**GitHub MCP 서버 인증 (project-ops 의 1순위 경로):** remote GitHub MCP 서버(`https://api.githubcopilot.com/mcp/`)는 자체 OAuth 인증이 필요하다. plugin 의 `mcpServers` 선언이 동작하지 않는 환경에서는 수동 연결:
+**GitHub MCP 서버 인증 (project-ops 의 1순위 경로):** remote GitHub MCP 서버(`https://api.githubcopilot.com/mcp/`)는 자체 OAuth 인증이 필요하다. plugin 의 `.mcp.json` 선언이 동작하지 않는 환경에서는 수동 연결:
 
 ```bash
 claude mcp add --transport http github https://api.githubcopilot.com/mcp/
@@ -225,20 +225,19 @@ Windows는 현재 미지원 (Bash 훅 의존). WSL 사용 권장.
 
 ## 6. 실증 라운드 결과 (2026-06-11, Claude Code 2.1.170)
 
-`claude plugin marketplace add <로컬 경로>` + `claude plugin install ai-pipe-core@ai-pipe` 를 실제 실행하고 공식 문서(code.claude.com/docs)와 교차 검증해 기존 미확정 10건을 전부 판정했다. **최종 인벤토리: Skills 9/9, Agents 12/12, Hooks 3그룹(PreToolUse/SessionStart/SessionEnd), MCP 1 — 전 컴포넌트 로드 확인** (`claude plugin details ai-pipe-core`, always-on ~2.6k tok).
+`claude plugin marketplace add <로컬 경로>` + `claude plugin install ai-pipe-core@ai-pipe` 를 실제 실행하고 공식 문서(code.claude.com/docs)와 교차 검증했다. **원래 미확정 10건 중 8건 판정(확정 4·수정 4), 2건은 실사용 라운드로 이월, 추가로 신규 결함 1건(owner) 발견·수정.** 최종 인벤토리: **Skills 9/9, Agents 12/12, Hooks 3그룹(PreToolUse/SessionStart/SessionEnd), MCP 1 — 전 컴포넌트 로드 확인** (`claude plugin details ai-pipe-core`, always-on ~2.6k tok).
 
-**틀려서 수정한 것 (4건):**
+**틀려서 수정한 것 (5건 — 원래 목록 4건 + 신규 발견 1건):**
 - ~~plugin.json `components`/`settings`/`requirements`~~ → **실재하지 않는 필드** (설치가 실제로 거부됨). agents/skills/hooks 디렉토리는 관례로 자동 발견; 훅 배선은 `hooks/hooks.json`; 도구 전제조건은 `ai-pipe preflight` 가 담당. `settings.json` 은 삭제.
-- ~~marketplace.json~~ → 최상위 `owner` 객체(`{name}`)가 **필수** (파서가 거부). 추가함.
 - ~~`${CLAUDE_PLUGIN_DIR}`~~ → 공식 변수는 **`${CLAUDE_PLUGIN_ROOT}`**. 전역 치환함.
 - ~~Stop 훅~~ → 세션 종료 체크포인트 의도면 **`SessionEnd`** 가 정확 (Stop 은 매 응답 종료마다 발화 — 이벤트 노이즈). hooks.json 은 SessionEnd 로 배선.
+- ~~plugin.json 인라인 `mcpServers`~~ → 인라인은 **미인식** (details 에서 MCP 0). plugin 루트의 **`.mcp.json`** 으로 이동하니 인식 — `type: http` + `url` 형식 자체는 유효 확정.
+- **[신규 발견]** marketplace.json 최상위 `owner` 객체(`{name}`)가 **필수** (파서가 거부 — 원래 미확정 목록에 없던 결함). 추가함.
 
-**맞았다고 확정된 것 (6건):**
+**맞았다고 확정된 것 (4건):**
 - marketplace `source: "./plugins/ai-pipe-core"` — **marketplace repo root 기준** 상대 경로 (설치 성공으로 확인).
 - PreToolUse matcher **`Agent`** — 정확 (2.1.63 에서 Task→Agent 개명, Task 는 하위호환 alias).
-- SKILL.md frontmatter (`paths`/`disable-model-invocation`/`user-invocable`/`argument-hint`/`allowed-tools`) — 전부 공식 필드.
-- agent frontmatter **`isolation: worktree`** — 공식 필드 (worktree 격리의 유일한 공식 경로).
-- MCP 서버 — plugin 루트의 **`.mcp.json`** 으로 선언 시 인식됨 (plugin.json 인라인은 미인식 → .mcp.json 으로 이동). `type: http` + `url` 형식 유효.
+- SKILL.md frontmatter (`paths`/`disable-model-invocation`/`user-invocable`/`argument-hint`/`allowed-tools`) — 전부 공식 필드. agent frontmatter **`isolation: worktree`** 도 공식 필드 (worktree 격리의 유일한 공식 경로).
 - `SessionStart` stdout 컨텍스트 주입 — 공식 문서 확인 ("stdout is added as context for Claude").
 
 **잔여 미확정 (2건 — 실사용 라운드로 이월):**
