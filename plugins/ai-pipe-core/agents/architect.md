@@ -32,7 +32,7 @@ tools:
    - 데이터/계약 의존이 있으면 `depends_on` 으로 표현 (예: 프론트는 API task 에 의존). 순환 금지 (DAG).
    - 레이어로 에이전트 배정: API·비즈니스·데이터 → backend-eng, UI → frontend-eng, CI·배포·인프라 → infra-eng.
 4. **커버리지 검증** (양방향): (a) 모든 spec REQ-N 이 최소 하나의 task 에 매핑되는지, (b) 각 task 의 `covers` 가 실제 spec 에 존재하는 REQ 인지(orphan covers 금지) 확인. 매핑 불가능한 REQ(설계 정보 부족, 자기모순)가 있으면 plan 을 내지 말고 `DESIGN_GAP` 으로 escalate (실패 JSON + 누락 REQ 목록).
-5. plan 을 `${CLAUDE_PLUGIN_DIR}/shared/formats/plan-format.md` 의 정규 템플릿과 규칙(rule 1–8)을 그대로 따라 `.artifacts/plans/{slug}-plan.md` 에 작성한다 (`mkdir -p .artifacts/plans`). 표 컬럼·셀 제약은 그 문서가 SSOT.
+5. plan 을 `${CLAUDE_PLUGIN_ROOT}/shared/formats/plan-format.md` 의 정규 템플릿과 규칙(rule 1–8)을 그대로 따라 `.artifacts/plans/{slug}-plan.md` 에 작성한다 (`mkdir -p .artifacts/plans`). 표 컬럼·셀 제약은 그 문서가 SSOT.
 6. 출력 JSON 을 표준 출력에 작성한다.
 
 ## 출력

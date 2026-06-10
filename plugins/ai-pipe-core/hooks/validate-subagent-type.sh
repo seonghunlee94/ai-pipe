@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # validate-subagent-type.sh — spec §7.3
 # PreToolUse hook for Agent. Allows only subagent_type values registered as
-# project agents (.claude/agents/*.md AND ${CLAUDE_PLUGIN_DIR}/agents/*.md)
+# project agents (.claude/agents/*.md AND ${CLAUDE_PLUGIN_ROOT}/agents/*.md)
 # or Claude Code's built-in agents.
 #
 # Why: typos and hallucinated agent names should fail loudly, not silently
@@ -62,7 +62,7 @@ fi
 # Gather allowed agents from both the project's .claude/agents/ and the
 # plugin's own agents/ (when invoked via plugin).
 ALLOWED=""
-for DIR in "${PROJECT_ROOT}/.claude/agents" "${CLAUDE_PLUGIN_DIR:-}/agents"; do
+for DIR in "${PROJECT_ROOT}/.claude/agents" "${CLAUDE_PLUGIN_ROOT:-}/agents"; do
   [[ -d "$DIR" ]] || continue
   while IFS= read -r f; do
     ALLOWED+="$(basename "$f" .md)"$'\n'

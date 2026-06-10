@@ -22,7 +22,7 @@ tools:
 
 ## 절차
 
-1. **Concordance Gate (§11.2)**: spec 의 REQ-N 과 구현이 커버한 `spec_tasks_covered` 를 비교한다. 누락 REQ 가 있으면 no-ship. `${CLAUDE_PLUGIN_DIR}/scripts/validate/validate-impl-concordance.sh <spec.md> <impl-output.json>...` 를 실행한다 — exit 0 = 전부 커버, exit 1 = 누락(stderr 에 목록) 또는 spec 에 REQ 없음, exit 2 = 입력 오류, exit 78 = jq 없음. exit 2/78 만 `ENV_FAILURE` 로 escalate 하고, exit 1 은 게이트의 정상 판정(no-ship 사유)이다.
+1. **Concordance Gate (§11.2)**: spec 의 REQ-N 과 구현이 커버한 `spec_tasks_covered` 를 비교한다. 누락 REQ 가 있으면 no-ship. `${CLAUDE_PLUGIN_ROOT}/scripts/validate/validate-impl-concordance.sh <spec.md> <impl-output.json>...` 를 실행한다 — exit 0 = 전부 커버, exit 1 = 누락(stderr 에 목록) 또는 spec 에 REQ 없음, exit 2 = 입력 오류, exit 78 = jq 없음. exit 2/78 만 `ENV_FAILURE` 로 escalate 하고, exit 1 은 게이트의 정상 판정(no-ship 사유)이다.
 2. **테스트 신호**: 모든 REQ-N 이 테스트로 커버됐고 테스트가 통과했는지.
 3. **리뷰 신호**: reviewer 가 `critical`/`important` 를 남겼는지 (남았으면 no-ship).
 4. 세 신호를 종합해 결정한다.

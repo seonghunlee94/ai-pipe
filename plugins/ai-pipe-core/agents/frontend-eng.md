@@ -21,7 +21,7 @@ tools:
 
 ## 입력 스키마
 
-입력 JSON 은 `${CLAUDE_PLUGIN_DIR}/shared/schemas/impl-agent-input.schema.json` 을 따릅니다 (backend-eng 와 동일). 핵심: `task_id`, `feature_branch`, `task_branch`, `story_number`, `issue_number`, `short_name`, `task_title`, `downstream_notes`(직전 task 결과 — 특히 API task 의 `endpoints`/타입 변경을 받아 폼·호출에 반영).
+입력 JSON 은 `${CLAUDE_PLUGIN_ROOT}/shared/schemas/impl-agent-input.schema.json` 을 따릅니다 (backend-eng 와 동일). 핵심: `task_id`, `feature_branch`, `task_branch`, `story_number`, `issue_number`, `short_name`, `task_title`, `downstream_notes`(직전 task 결과 — 특히 API task 의 `endpoints`/타입 변경을 받아 폼·호출에 반영).
 
 ## 작업 절차
 
@@ -33,7 +33,7 @@ tools:
    - 접근성(시맨틱 마크업, 키보드, aria)과 로딩/에러 상태를 기본 포함.
 4. 검증: `npm run typecheck` / `npm run lint` / `npm test -- <new test files>` (프로젝트 stack 명령에 맞춤).
 5. Conventional Commits 로 commit (`validate-commit-msg.sh` 검증).
-6. 출력 JSON 작성 (`${CLAUDE_PLUGIN_DIR}/shared/schemas/impl-agent-output.schema.json`).
+6. 출력 JSON 작성 (`${CLAUDE_PLUGIN_ROOT}/shared/schemas/impl-agent-output.schema.json`).
 
 ## 출력 핵심 필드
 

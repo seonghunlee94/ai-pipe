@@ -1,7 +1,7 @@
 // Domain error types. cli.ts catches AiPipeError and prints only message;
 // any other error prints stack. Spec §10 (error classification) is a separate
 // concern handled at runtime by the plugin's
-// ${CLAUDE_PLUGIN_DIR}/scripts/validate/classify-error-recovery.sh.
+// ${CLAUDE_PLUGIN_ROOT}/scripts/validate/classify-error-recovery.sh.
 
 export type AiPipeErrorCode =
   | "E_TARGET_EXISTS"

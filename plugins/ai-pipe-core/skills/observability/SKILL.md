@@ -28,9 +28,9 @@ user-invocable: false
 | `task_done` | `task_id`, `status`, `elapsed_sec`, `usage`? |
 | `task_retry` | `task_id`, `attempt`, `category` |
 | `escalation` | `task_id`, `to` |
-| `session_stop` | `branch`, `dirty_files` (Stop 훅이 기록) |
+| `session_stop` | `branch`, `dirty_files` (SessionEnd 훅이 기록) |
 
-`${CLAUDE_PLUGIN_DIR}/bin/adp-watch <slug>` 로 실시간 추적, `... <slug> --replay` 로 재생, `--cost` 로 비용 요약 (`bin/` 이 PATH 에 자동 등록되는지는 README §6 미확정 — 전체 경로로 호출).
+`${CLAUDE_PLUGIN_ROOT}/bin/adp-watch <slug>` 로 실시간 추적, `... <slug> --replay` 로 재생, `--cost` 로 비용 요약 (`bin/` 이 PATH 에 자동 등록되는지는 README §6 미확정 — 전체 경로로 호출).
 
 ## 2. Token / cost tracking
 
@@ -55,7 +55,7 @@ user-invocable: false
 
 ## 4. Eval harness seed
 
-prompt 변경이 품질을 떨어뜨리지 않았는지 회귀 검사한다. 시드 위치: `${CLAUDE_PLUGIN_DIR}/shared/evals/` (스키마 `eval-case.schema.json` + 케이스 `*.eval.json`).
+prompt 변경이 품질을 떨어뜨리지 않았는지 회귀 검사한다. 시드 위치: `${CLAUDE_PLUGIN_ROOT}/shared/evals/` (스키마 `eval-case.schema.json` + 케이스 `*.eval.json`).
 
 각 eval 케이스는 고정 입력 + 기대 메트릭:
 

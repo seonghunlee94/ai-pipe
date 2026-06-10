@@ -2,7 +2,7 @@
 
 Claude Code 기반 멀티 에이전트 자동화 파이프라인. **Claude Code Plugin Marketplace**로 배포하여 다양한 프로젝트·머신에서 공유 가능하고, 프로젝트별 설정과 GitHub Issues/Projects V2 연동을 지원한다.
 
-> **현재 상태: DEV1–7 아크 완료 (퍼블리시 준비 단계)**. 12개 에이전트 전부 정의, spec→plan→execute 파이프라인 척추 연결, PreToolUse 6종 + SessionStart/Stop 훅, CLI 12개 명령(init/version/validate/eval + 라이프사이클 8종), Concordance Gate·오류 분류기, 5-레이어 테스트 스위트(lint/typecheck/vitest/훅·스크립트 하네스) + CI. 남은 것: §0 퍼블리시 체크리스트(라이선스 선택·§6 실증 라운드는 사용자 소유). 자세한 설계는 [`multi-agent-pipeline-best-practices.md`](./multi-agent-pipeline-best-practices.md).
+> **현재 상태: DEV1–7 아크 + §6 실증 라운드 완료**. 12개 에이전트 전부 정의, spec→plan→execute→verify 파이프라인 체인, PreToolUse 6종 + SessionStart/SessionEnd 훅, CLI 12개 명령, Concordance Gate·오류 분류기, 5-레이어 테스트 스위트 + CI. **플러그인 설치 실증 완료** — `claude plugin install` 로 Skills 9/Agents 12/Hooks 3그룹/MCP 1 전부 로드 확인 (§6 참조). 남은 것: 라이선스 선택 → 버전·태그 (§0 체크리스트). 자세한 설계는 [`multi-agent-pipeline-best-practices.md`](./multi-agent-pipeline-best-practices.md).
 
 ---
 
@@ -32,7 +32,7 @@ grep -rl 'your-org' . --include='*.json' --include='*.md' --include='*.ts' --inc
 
 1. **라이선스 결정** — 현재 `UNLICENSED`(private, 의도된 상태). 공개 전 라이선스(MIT/Apache-2.0 등)를 **사용자가 직접 선택**해 `LICENSE` 파일 추가 + `package.json` `license` 갱신 (§7).
 2. **placeholder 치환** — 위 sed 스윕 실행 → `npm run build`(dist 재생성) → `node dist/cli.js validate . --strict` 로 잔여 `your-org/` 경고 0 확인.
-3. **§6 실증 라운드** — `/plugin marketplace add` + `/plugin install` 1회 실행으로 미확정 10건(특히 plugin.json 스키마·PreToolUse matcher 이름)을 확정. 결과에 따라 §3 매트릭스 수정.
+3. ~~**§6 실증 라운드**~~ — **완료 (2026-06-11)**: `claude plugin marketplace add` + `install` 실행으로 미확정 10건 중 8건 확정·4건 수정 (§6 결과 참조). 잔여 2건(adp-watch PATH, usage 페이로드)은 실사용 라운드로 이월.
 4. **버전·태그** — `package.json`/`plugin.json`/`marketplace.json` 버전 정렬 후 `git tag v<X.Y.Z>` push → publish workflow 가 `npm test` 게이트 통과 시 GitHub Packages 로 배포.
 
 ---
@@ -76,7 +76,7 @@ ai-pipe는 **두 채널**로 사용자 프로젝트에 도착한다:
 /plugin install ai-pipe-core@ai-pipe
 ```
 
-이 시점에서 에이전트(pm, backend-eng, project-ops, …), 훅(PreToolUse 차단 6종 + SessionStart/Stop lifecycle 2종), skill·명령(`/create-spec` 등)이 활성화된다.
+이 시점에서 에이전트(pm, backend-eng, project-ops, …), 훅(PreToolUse 차단 6종 + SessionStart/SessionEnd lifecycle 2종), skill·명령(`/create-spec` 등)이 활성화된다.
 
 ### 2-2. 프로젝트 부트스트랩 (선택 — 새 프로젝트마다 한 번)
 
@@ -116,31 +116,31 @@ MCP 연결이 없어도 project-ops 는 gh CLI 로 동작한다 (기능 동일, 
 
 | 영역 | 상태 | spec |
 |------|------|------|
-| `settings.json` (PreToolUse 6종 + SessionStart + Stop wired, `${CLAUDE_PLUGIN_DIR}` substitution) | working | §7.1 |
+| `hooks/hooks.json` (PreToolUse 6종 + SessionStart + SessionEnd wired, `${CLAUDE_PLUGIN_ROOT}` substitution — 설치 실증으로 3그룹 로드 확인) | working | §7.1 |
 | `hooks/verify-boundary.sh` (suffix-match, empty agent_type 통과, exit 2) | working | §7.2 |
 | `hooks/verify-git-safety.sh` (force-push/reset --hard/branch -D/clean -f/restore ./amend/--no-verify) | working | §7.3 |
 | `hooks/validate-commit-msg.sh` (Conventional Commits + HEREDOC 인식) | working | §7.3 |
 | `hooks/ban-background.sh` (npm/yarn/pnpm/tsc/vitest/jest/pytest/cargo/go/make/gradle/mvn/bazel) | working | §7.3 |
 | `hooks/validate-subagent-type.sh` (`CLAUDE_PROJECT_DIR` 우선, 워크트리 안전) | working | §7.3 |
 | `hooks/secrets-scan.sh` (PAT/AWS/API key/JWT/Authorization 헤더(도구 무관)/curl·wget basic-auth 차단 — Edit\|Write+Bash) | working | PR5 |
-| `hooks/session-start.sh` (세션 시작 컨텍스트 주입 — 버전/브랜치/worktree/마지막 이벤트) | working* | PR5, §6 item 8 |
-| `hooks/stop-checkpoint.sh` (세션 종료 시 JSONL checkpoint append) | working* | PR5, §12.1 |
+| `hooks/session-start.sh` (세션 시작 컨텍스트 주입 — stdout 주입 공식 확인) | working | PR5 |
+| `hooks/stop-checkpoint.sh` (세션 종료 시 JSONL checkpoint append — SessionEnd) | working | PR5, §12.1 |
 | `agents/{pm,backend-eng,project-ops,architect,frontend-eng,infra-eng,qa,reviewer,verifier,test-unit,test-e2e-api,test-e2e-ui}.md` (12종 전부 정의됨) | working | §4.1, §6.1, §3.2 |
 | `skills/create-spec/SKILL.md` (`user-invocable: true` → `/create-spec`) | working | §4.2 |
 | `skills/design-plan/SKILL.md` (`/design-plan <slug>` → architect 호출, spec→plan) | working | §4.2 |
 | `skills/verify/SKILL.md` (`/verify <slug>` → qa→test-*→reviewer→verifier 오케스트레이션, ship/no-ship) | working | §4.2, §4.4, §11.2 |
 | `shared/formats/plan-format.md` (plan 정규 구조 SSOT — architect 생성, execute-plan 소비) | working | §4.4 |
-| `skills/execute-plan/SKILL.md` (native fan-out/직렬 merge 절차 — isolation 필드 미실증) | working* | §4.2 |
+| `skills/execute-plan/SKILL.md` (native fan-out/직렬 merge 절차) | working | §4.2 |
 | `skills/common-agent-rules/SKILL.md` (paths 자동 활성화) | working | §6.1 |
 | `skills/boundary-enforcement/SKILL.md` (paths 자동 활성화) | working | §6.1, §7.2 |
 | `skills/{pm-rules,backend-conventions}/SKILL.md` (paths 비활성 — 본문 채워질 때 활성화) | stub | §5.1, §6.1 |
 | `shared/schemas/impl-agent-input.schema.json`, `impl-agent-output.schema.json` | working | §11.1 |
 | `scripts/validate/validate-impl-concordance.sh` (Concordance Gate — spec REQ-N vs impl `spec_tasks_covered`, 누락 시 exit 1) | working | §11.2 |
 | `scripts/validate/classify-error-recovery.sh` (실패 로그 → §8 분류 7종+UNKNOWN, retry=1/escalate=2) | working | §10.2 |
-| GitHub 작업 — `gh` CLI 경로 working / MCP 경로 미실증 (§6 item 6, `scripts/gh/` 는 PR3에서 폐기) | working* | §3.2 |
+| GitHub 작업 — `gh` CLI 경로 working / MCP 경로는 .mcp.json 으로 로드 확인 — 런타임 OAuth 는 실사용 시 (`scripts/gh/` 는 PR3에서 폐기) | working | §3.2 |
 | `bin/adp-watch` (이벤트 뷰어 `--replay`/`--cost`, 토큰/비용 집계) | working | §12.2 |
 | `skills/observability/SKILL.md` (paths 자동 활성화), `shared/evals/` (스키마 + 시드 1) | working | §12.1–12.3 |
-| Worktree 격리 — impl 에이전트 `isolation: worktree` frontmatter (native, §6 item 7 미실증, 자체 DAG runtime 은 PR4에서 폐기) | working* | §3.3 |
+| Worktree 격리 — impl 에이전트 `isolation: worktree` frontmatter (native — 공식 필드 확인, 자체 DAG runtime 은 PR4에서 폐기) | working | §3.3 |
 
 ### CLI (`src/`)
 
@@ -177,7 +177,7 @@ PreToolUse 차단 훅 6종(verify-boundary, verify-git-safety, validate-commit-m
 /verify {slug}                             # qa→test-*→reviewer→verifier → ship / no-ship 결정
 ```
 
-- 산출물은 `.artifacts/`(specs/plans/runs) 아래에 떨어진다. 실행 이벤트는 `.artifacts/runs/{slug}-events.jsonl`, 진행/비용은 `${CLAUDE_PLUGIN_DIR}/bin/adp-watch {slug}`.
+- 산출물은 `.artifacts/`(specs/plans/runs) 아래에 떨어진다. 실행 이벤트는 `.artifacts/runs/{slug}-events.jsonl`, 진행/비용은 `${CLAUDE_PLUGIN_ROOT}/bin/adp-watch {slug}`.
 - 로컬 단독(GitHub 미연동) 실행은 `config/pipeline.json` 의 `local_defaults`(story/issue=1)로 impl-agent-input 을 채운다. GitHub Issues/Projects 연동은 project-ops 에이전트가 담당.
 - impl 에이전트 3종(backend/frontend/infra-eng)이 모두 정의됨 — plan 의 task 가 어느 레이어든 execute-plan 이 fan-out 한다. 검증 단계는 `/verify {slug}` 가 qa→test-*(직렬)→reviewer→verifier 를 오케스트레이션해 ship/no-ship 을 보고한다 (Concordance Gate 입력은 execute-plan 이 영속화한 `.artifacts/runs/{slug}-impl-outputs/*.json`).
 
@@ -223,22 +223,27 @@ Windows는 현재 미지원 (Bash 훅 의존). WSL 사용 권장.
 
 ---
 
-## 6. 알려진 미확정 (Plugin Marketplace 실증 필요)
+## 6. 실증 라운드 결과 (2026-06-11, Claude Code 2.1.170)
 
-PR1~PR2는 Claude Code Plugin Marketplace / Skills 공식 스키마를 직접 검증하지 못한 채 작성됐다. 다음 항목은 실제 `/plugin marketplace add github:your-org/ai-pipe` + `/plugin install ai-pipe-core@ai-pipe` 시점에 검증/조정 예정:
+`claude plugin marketplace add <로컬 경로>` + `claude plugin install ai-pipe-core@ai-pipe` 를 실제 실행하고 공식 문서(code.claude.com/docs)와 교차 검증해 기존 미확정 10건을 전부 판정했다. **최종 인벤토리: Skills 9/9, Agents 12/12, Hooks 3그룹(PreToolUse/SessionStart/SessionEnd), MCP 1 — 전 컴포넌트 로드 확인** (`claude plugin details ai-pipe-core`, always-on ~2.6k tok).
 
-- `plugins/ai-pipe-core/plugin.json`의 필드명 (`components`, `settings`, `requirements`, ...) — 공식 manifest 스키마와 일치 보장 불가
-- `.claude-plugin/marketplace.json`의 `source: "./plugins/ai-pipe-core"` — marketplace 위치 기준인지 repo root 기준인지 미확정
-- `plugins/ai-pipe-core/settings.json` 내부의 `${CLAUDE_PLUGIN_DIR}` substitution 범위 — hook command 외 필드에서도 동작하는지 미확정
-- `settings.json` 내 PreToolUse matcher `"Agent"` — 실제 Claude Code의 subagent tool 이름이 `Agent` / `Task` / `TaskCreate` 중 어느 것인지 한 번 캡처 후 확정 필요
-- SKILL.md frontmatter 필드 (`paths`, `disable-model-invocation`, `user-invocable`, `allowed-tools`) — 공식 스키마 대조 미완. paths의 read/edit 트리거 시맨틱도 실증 필요
-- `plugin.json`의 `mcpServers` 필드 (PR3) — plugin manifest가 MCP 서버 선언을 지원하는지, 필드명/형식(`type: http` + `url`)이 맞는지 실증 필요. 미지원이면 사용자가 `claude mcp add` 로 수동 연결
-- agent frontmatter 의 `isolation: worktree` 필드 (PR4) — 필드명/값과 "변경 없으면 자동 정리" 시맨틱 실증 필요. 미지원이면 backend-eng 절차에 수동 `git worktree add` 복원
-- `SessionStart`/`Stop` 훅 이벤트명·페이로드 (PR5) — settings.json 의 이벤트 키 이름과 SessionStart stdout 컨텍스트 주입 시맨틱 실증 필요
-- `bin/adp-watch` PATH 등록 (PR6) — `plugin.json` 은 `agents/hooks/skills` 만 컴포넌트로 선언한다. plugin 이 `bin/` 을 자동으로 PATH 에 올리는지 미확정 — 안 올리면 `${CLAUDE_PLUGIN_DIR}/bin/adp-watch` 전체 경로로 호출(현재 SKILL 안내 방식)
-- observability 의 `usage` 페이로드·cache_control 전략·단가표 (PR6) — subagent 호출 시 토큰 usage(특히 `cache_read_tokens`/`cache_creation_tokens`)를 이벤트로 회수할 수 있는지, skill 본문에 `cache_control` breakpoint 를 적용할 수단이 있는지 실증 필요. `adp-watch` 의 모델별 단가표(Opus $15/$75, Sonnet $3/$15, Haiku $1/$5)는 2026-06 추정치이며 docs.anthropic.com 으로 확정 필요. 불가 시 `adp-watch --cost` 는 usage 미첨부 이벤트에 대해 0 으로 누적(현재 동작)
+**틀려서 수정한 것 (4건):**
+- ~~plugin.json `components`/`settings`/`requirements`~~ → **실재하지 않는 필드** (설치가 실제로 거부됨). agents/skills/hooks 디렉토리는 관례로 자동 발견; 훅 배선은 `hooks/hooks.json`; 도구 전제조건은 `ai-pipe preflight` 가 담당. `settings.json` 은 삭제.
+- ~~marketplace.json~~ → 최상위 `owner` 객체(`{name}`)가 **필수** (파서가 거부). 추가함.
+- ~~`${CLAUDE_PLUGIN_DIR}`~~ → 공식 변수는 **`${CLAUDE_PLUGIN_ROOT}`**. 전역 치환함.
+- ~~Stop 훅~~ → 세션 종료 체크포인트 의도면 **`SessionEnd`** 가 정확 (Stop 은 매 응답 종료마다 발화 — 이벤트 노이즈). hooks.json 은 SessionEnd 로 배선.
 
-별도 실증 라운드에서 위 10건을 정리한다.
+**맞았다고 확정된 것 (6건):**
+- marketplace `source: "./plugins/ai-pipe-core"` — **marketplace repo root 기준** 상대 경로 (설치 성공으로 확인).
+- PreToolUse matcher **`Agent`** — 정확 (2.1.63 에서 Task→Agent 개명, Task 는 하위호환 alias).
+- SKILL.md frontmatter (`paths`/`disable-model-invocation`/`user-invocable`/`argument-hint`/`allowed-tools`) — 전부 공식 필드.
+- agent frontmatter **`isolation: worktree`** — 공식 필드 (worktree 격리의 유일한 공식 경로).
+- MCP 서버 — plugin 루트의 **`.mcp.json`** 으로 선언 시 인식됨 (plugin.json 인라인은 미인식 → .mcp.json 으로 이동). `type: http` + `url` 형식 유효.
+- `SessionStart` stdout 컨텍스트 주입 — 공식 문서 확인 ("stdout is added as context for Claude").
+
+**잔여 미확정 (2건 — 실사용 라운드로 이월):**
+- `bin/adp-watch` PATH 등록 — plugin 이 `bin/` 을 PATH 에 올리는지 미확인. 현행대로 `${CLAUDE_PLUGIN_ROOT}/bin/adp-watch` 전체 경로 호출 유지.
+- observability `usage` 페이로드·cache_control·단가표 — subagent 토큰 usage 회수 가능 여부는 실제 파이프라인 실행에서 확인. `adp-watch` 단가표(Opus $15/$75, Sonnet $3/$15, Haiku $1/$5)는 2026-06 추정치.
 
 ---
 

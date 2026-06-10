@@ -20,7 +20,7 @@ tools:
 
 ## 입력 스키마
 
-`${CLAUDE_PLUGIN_DIR}/shared/schemas/impl-agent-input.schema.json` (backend-eng 와 동일). 핵심: `task_id`, `feature_branch`, `task_branch`, `story_number`, `issue_number`, `short_name`, `task_title`, `downstream_notes`(앱이 노출하는 포트·환경변수·빌드 산출물 등).
+`${CLAUDE_PLUGIN_ROOT}/shared/schemas/impl-agent-input.schema.json` (backend-eng 와 동일). 핵심: `task_id`, `feature_branch`, `task_branch`, `story_number`, `issue_number`, `short_name`, `task_title`, `downstream_notes`(앱이 노출하는 포트·환경변수·빌드 산출물 등).
 
 ## 작업 절차
 

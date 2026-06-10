@@ -12,7 +12,7 @@ HOOKS="$REPO_ROOT/plugins/ai-pipe-core/hooks"
 
 # validate-subagent-type resolves its whitelist from these; point them at the
 # plugin so real agent names pass and bogus ones are blocked.
-export CLAUDE_PLUGIN_DIR="$REPO_ROOT/plugins/ai-pipe-core"
+export CLAUDE_PLUGIN_ROOT="$REPO_ROOT/plugins/ai-pipe-core"
 export CLAUDE_PROJECT_DIR="$REPO_ROOT"
 
 if ! command -v jq >/dev/null 2>&1; then

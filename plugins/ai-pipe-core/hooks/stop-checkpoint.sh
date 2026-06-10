@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # stop-checkpoint.sh — PR5
-# Stop hook. Appends a session-end checkpoint line to the latest run's JSONL
+# SessionEnd hook. Appends a session-end checkpoint line to the latest run's JSONL
 # event stream (spec §12.1) so interrupted pipelines can be resumed with
 # context about where the session left off.
 #

@@ -35,7 +35,7 @@ allowed-tools:
 
 ## 실패 처리
 
-- 디스패치한 에이전트가 실패하면 실패 로그를 `${CLAUDE_PLUGIN_DIR}/scripts/validate/classify-error-recovery.sh` 로 분류해 따른다 (exit 1 = 재시도[`limits` 한도 내], 2 = escalate, 그 외 rc = `ENV_FAILURE`) — execute-plan step 8 과 동일 계약.
+- 디스패치한 에이전트가 실패하면 실패 로그를 `${CLAUDE_PLUGIN_ROOT}/scripts/validate/classify-error-recovery.sh` 로 분류해 따른다 (exit 1 = 재시도[`limits` 한도 내], 2 = escalate, 그 외 rc = `ENV_FAILURE`) — execute-plan step 8 과 동일 계약.
 
 ## 금지 사항
 

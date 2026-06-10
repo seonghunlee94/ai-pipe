@@ -88,7 +88,7 @@ dev server, watcher, `tail -f` 등은 백그라운드 허용.
 
 `validate-subagent-type.sh`가 `Agent` 도구 호출 시 `subagent_type`을 화이트리스트로 검증한다:
 
-- 프로젝트 에이전트: `${CLAUDE_PROJECT_DIR}/.claude/agents/*.md` + `${CLAUDE_PLUGIN_DIR}/agents/*.md` 파일명에서 자동 추출
+- 프로젝트 에이전트: `${CLAUDE_PROJECT_DIR}/.claude/agents/*.md` + `${CLAUDE_PLUGIN_ROOT}/agents/*.md` 파일명에서 자동 추출
 - 빌트인: `general-purpose`, `claude`, `Explore`, `Plan`, `claude-code-guide`, `statusline-setup`
 
 오타나 환각된 에이전트 이름은 즉시 차단된다.

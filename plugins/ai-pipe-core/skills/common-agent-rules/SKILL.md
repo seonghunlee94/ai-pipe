@@ -47,11 +47,11 @@ user-invocable: false
 ## 4. Tool Usage
 
 - 백그라운드 실행은 dev server / watcher / tail에만 허용. 빌드·테스트·린트는 항상 foreground — `ban-background.sh`가 차단.
-- 다른 서브에이전트는 plugin 에이전트(`${CLAUDE_PLUGIN_DIR}/agents/*.md`), 프로젝트 에이전트(`.claude/agents/*.md`, 있는 경우), 또는 빌트인(`Explore`, `Plan`, `general-purpose` 등) 중에서만 호출 — `validate-subagent-type.sh`가 양쪽 디렉토리에서 화이트리스트를 구성한다.
+- 다른 서브에이전트는 plugin 에이전트(`${CLAUDE_PLUGIN_ROOT}/agents/*.md`), 프로젝트 에이전트(`.claude/agents/*.md`, 있는 경우), 또는 빌트인(`Explore`, `Plan`, `general-purpose` 등) 중에서만 호출 — `validate-subagent-type.sh`가 양쪽 디렉토리에서 화이트리스트를 구성한다.
 
 ## 5. Output Contracts
 
-- 입출력 JSON은 반드시 `${CLAUDE_PLUGIN_DIR}/shared/schemas/impl-agent-{input,output}.schema.json` (또는 역할별 스키마)를 따른다.
+- 입출력 JSON은 반드시 `${CLAUDE_PLUGIN_ROOT}/shared/schemas/impl-agent-{input,output}.schema.json` (또는 역할별 스키마)를 따른다.
 - `downstream_notes`는 항상 object (빈 `{}`도 허용, `null` 금지) — spec §4.3.
 - `status` 값: `"success"`, `"failure"`, `"partial"` 중 하나.
 

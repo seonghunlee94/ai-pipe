@@ -1,25 +1,17 @@
 {
-  "$comment": "Claude Code plugin manifest. Activates the agents/, hooks/, skills/ subtrees. Claude Code 2.1+ unified commands into skills, so previous `commands/` content lives under `skills/` now and slash commands come from `skills/<name>/SKILL.md` with `user-invocable: true`.",
+  "$comment": "Claude Code plugin manifest — empirically validated against the official schema (2.1.170). agents/, skills/, hooks/ are auto-discovered by convention (no `components` field exists); hook wiring lives in hooks/hooks.json; `settings`/`requirements` are not real manifest fields (tool prerequisites — jq, gh, bash, git — are checked by `ai-pipe preflight` and documented in README).",
   "name": "ai-pipe-core",
   "version": "0.0.4",
-  "description": "Multi-agent automation pipeline: PM/Architect/Backend/Frontend/Infra/QA/Test/Reviewer/Verifier/Project-Ops agents, with PreToolUse safety hooks and GitHub Issues/Projects V2 integration via the GitHub MCP server (gh CLI fallback).",
-  "license": "UNLICENSED",
+  "description": "Multi-agent automation pipeline: PM/Architect/Backend/Frontend/Infra/QA/Test/Reviewer/Verifier/Project-Ops agents, with PreToolUse safety hooks and GitHub Issues/Projects V2 integration via the GitHub MCP server (gh CLI fallback). Requires jq, gh, bash, git on PATH (run `ai-pipe preflight`).",
+  "author": {
+    "name": "seonghunlee94"
+  },
   "homepage": "https://github.com/your-org/ai-pipe",
-  "components": {
-    "agents": "./agents",
-    "hooks": "./hooks",
-    "skills": "./skills"
-  },
-  "settings": "./settings.json",
-  "mcpServers": {
-    "github": {
-      "$comment": "Remote GitHub MCP server (PR3). project-ops prefers MCP tools; falls back to gh CLI when the server is unavailable. Field name pending empirical verification — see README §6.",
-      "type": "http",
-      "url": "https://api.githubcopilot.com/mcp/"
-    }
-  },
-  "requirements": {
-    "claudeCode": ">=2.1.0",
-    "tools": ["jq", "gh", "bash", "git"]
-  }
+  "license": "UNLICENSED",
+  "keywords": [
+    "multi-agent",
+    "pipeline",
+    "orchestration",
+    "github-projects"
+  ]
 }
