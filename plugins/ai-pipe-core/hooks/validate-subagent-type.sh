@@ -28,6 +28,10 @@ REQUESTED=$(jq -r '.tool_input.subagent_type // empty' <<<"$INPUT")
 # Agent tool can be called without subagent_type (defaults to general-purpose).
 [[ -n "$REQUESTED" ]] || exit 0
 
+# Plugin agents are addressed as '{plugin}:{agent}' in the Agent tool, but the
+# allowlist below is built from .md basenames — compare against the bare name.
+REQUESTED_BASE="${REQUESTED##*:}"
+
 # Built-in agents that don't need a .md file.
 BUILTIN=(
   "general-purpose"
@@ -77,7 +81,7 @@ if [[ -z "$ALLOWED" ]]; then
   exit 0
 fi
 
-if ! printf '%s\n' "$ALLOWED" | grep -Fxq -- "$REQUESTED"; then
+if ! printf '%s\n' "$ALLOWED" | grep -Fxq -- "$REQUESTED_BASE"; then
   cat >&2 <<MSGEOF
 BLOCKED: subagent_type '$REQUESTED' is not registered.
   available project agents:

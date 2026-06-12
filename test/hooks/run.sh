@@ -95,6 +95,11 @@ check "allow bg non-build" ban-background.sh 0 "$(p_bg "tail -f log.txt" true)"
 check "allow real agent"  validate-subagent-type.sh 0 "$(p_subagent "backend-eng")"
 check "allow builtin"     validate-subagent-type.sh 0 "$(p_subagent "general-purpose")"
 check "block bogus agent" validate-subagent-type.sh 2 "$(p_subagent "totally-made-up")" "not registered"
+# Plugin-namespaced form ({plugin}:{agent}) — how the Agent tool actually
+# addresses plugin agents (dogfood finding: bare-name-only comparison blocked
+# EVERY plugin agent dispatch).
+check "allow namespaced agent" validate-subagent-type.sh 0 "$(p_subagent "ai-pipe-core:pm")"
+check "block namespaced bogus" validate-subagent-type.sh 2 "$(p_subagent "ai-pipe-core:totally-made-up")" "not registered"
 
 # --- secrets-scan (token families + auth) ---
 # Secret-pattern fixtures are ASSEMBLED AT RUNTIME from a prefix + a repeated
