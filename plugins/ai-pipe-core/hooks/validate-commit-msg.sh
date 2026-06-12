@@ -40,12 +40,27 @@ CMD=$(jq -r '.tool_input.command // empty' <<<"$INPUT")
 # must trigger neither the gate nor any Case. Opener lines are KEPT (Case A
 # anchors on them); body lines through the closing tag line are dropped.
 # BSD-awk-safe (no gawk match arrays); `<<-` closers may be tab-indented.
+# Opener guard `(^|[^<])<<` excludes here-strings (`<<<word` — the third `<`
+# kills both alternatives). Closers: CRLF tolerated; leading tabs stripped
+# ONLY for `<<-` (plain `<<` does not close on a tab-indented tag — stripping
+# unconditionally re-opened the body early and resurrected the FP class).
+# Accepted residuals (advisory guardrail, not a bypass-proof gate): an
+# arithmetic shift by a VARIABLE (`$((1<<n))`) still looks like an opener, and
+# a SINGLE-LINE quoted literal containing the Case A idiom is not stripped.
 CMD_SCAN=$(printf '%s\n' "$CMD" | awk '
-  inbody { line = $0; sub(/^\t+/, "", line); if (line == tag) inbody = 0; next }
-  /<<-?['\''"]?[A-Za-z_]/ {
+  inbody {
+    line = $0
+    sub(/\r$/, "", line)
+    if (dashed) sub(/^\t+/, "", line)
+    if (line == tag) inbody = 0
+    next
+  }
+  /(^|[^<])<<-?['\''"]?[A-Za-z_]/ {
+    dashed = ($0 ~ /(^|[^<])<<-['\''"]?[A-Za-z_]/)
     t = $0
     sub(/.*<<-?['\''"]?/, "", t)
     sub(/[^A-Za-z0-9_].*/, "", t)
+    sub(/\r$/, "", t)
     tag = t; inbody = 1; print; next
   }
   { print }

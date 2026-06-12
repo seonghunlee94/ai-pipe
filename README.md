@@ -251,7 +251,7 @@ Windows는 현재 미지원 (Bash 훅 의존). WSL 사용 권장.
 스크래치 프로젝트에서 설치된 플러그인으로 실제 기능 1개(todo-file-store, 3 REQ)를 `/create-spec → /design-plan → /execute-plan → /verify` 전체 체인으로 완주 — **verifier 최종 판정 SHIP** (Concordance Gate exit 0, 10/10 테스트, reviewer minor 2·nit 2·blocker 0). worktree 격리 fan-out, 직렬 merge, impl-outputs 영속화, 이벤트 기록, 정리(브랜치/worktree 제거)까지 전부 실동작 확인. 발견·수정된 결함 3건:
 
 1. **`validate-subagent-type.sh` 가 모든 플러그인 에이전트 호출을 차단** — Agent tool 은 `{plugin}:{agent}`(`ai-pipe-core:pm`) 형태로 호출하는데 allowlist 는 bare 이름 — prefix 벗겨 비교하도록 수정 (+2 하네스 케이스).
-2. **`validate-commit-msg.sh` heredoc 오탐** — 복합 명령의 파일 생성용 `cat <<EOF` 를 commit 메시지로 오인해 정상 commit 을 차단. Case A 를 `-m "$(cat <<TAG` 구조에 앵커 + 번들 플래그(`-qm`) 파싱 추가 (+4 하네스 케이스).
+2. **`validate-commit-msg.sh` heredoc 오탐** — 복합 명령의 파일 생성용 `cat <<EOF` 를 commit 메시지로 오인해 정상 commit 을 차단. Case A 를 `-m "$(cat <<TAG` 구조에 앵커 + 번들 플래그(`-qm`) 파싱 추가. 리뷰에서 생존 변종(heredoc **본문**이 commit 관용구를 인용하는 self-hosting 케이스)까지 발견되어 본문 strip 프리스캔(CMD_SCAN)으로 확장 — here-string/CRLF/`<<-` 탭 엣지 포함 (+13 하네스 케이스).
 3. **이벤트 키 드리프트** — LLM 오케스트레이터가 `type` 대신 `event` 키로 기록(훅이 쓴 줄은 준수) → adp-watch 가 `· ?` 렌더. 생산자(스킬에 정확한 라인 예시 인라인) + 소비자(`.type // .event` 관용) 양면 수정.
 
 추가 실증 데이터: 디렉토리-소스 marketplace 설치에서 `${CLAUDE_PLUGIN_ROOT}` 는 **소스 디렉토리를 직접** 가리킨다(캐시 미사용) — repo 수정이 재설치 없이 즉시 반영. **뒤집으면 실행 중인 세션이 자기 toolchain(훅·스킬)을 mid-run 에 변이시킬 수 있다는 뜻**이다 — dogfood 자식의 훅 수정이 그 사례(이번엔 부모 리뷰로 흡수). 변경은 반드시 리뷰를 거칠 것. `/verify` 는 내장 verify 스킬과 이름이 겹쳐 **`/ai-pipe-core:verify`** 네임스페이스 호출이 필요할 수 있다.

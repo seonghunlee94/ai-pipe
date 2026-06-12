@@ -86,7 +86,8 @@ FILE_HEREDOC_GOOD=$'cat > pkg.json <<\'EOF\'\n{\n  "a": 1\n}\nEOF\ngit commit -m
 FILE_HEREDOC_BAD=$'cat > pkg.json <<\'EOF\'\n{\n  "a": 1\n}\nEOF\ngit commit -m "added stuff"'
 check "allow file-heredoc+good" validate-commit-msg.sh 0 "$(p_cmd "$FILE_HEREDOC_GOOD")"
 check "block file-heredoc+bad"  validate-commit-msg.sh 2 "$(p_cmd "$FILE_HEREDOC_BAD")" "Conventional Commits"
-# Bundled short flags ending in m (-qm/-sm) now parse via Case C.
+# Bundled short flags ending in m (-qm/-sm) now parse via Cases C (quoted)
+# and D (bare token).
 check "allow -qm conventional"  validate-commit-msg.sh 0 "$(p_cmd 'git commit -qm "feat: bundled flag"')"
 check "block -qm non-type"      validate-commit-msg.sh 2 "$(p_cmd 'git commit -qm "added a thing"')" "Conventional Commits"
 check "block -qm bare token"    validate-commit-msg.sh 2 "$(p_cmd 'git commit -qm fixstuff')" "Conventional Commits"
@@ -100,6 +101,21 @@ check "block after body-literal" validate-commit-msg.sh 2 "$(p_cmd "$BODY_LITERA
 # stripped from the subject, not false-blocked.
 HEREDOC_TABBED=$'git commit -m "$(cat <<-\'EOF\'\n\tfeat: tabbed subject\n\tEOF\n)"'
 check "allow <<- tabbed subject" validate-commit-msg.sh 0 "$(p_cmd "$HEREDOC_TABBED")"
+# Stripper edge regressions (round 2): a here-string is NOT a heredoc opener
+# (was a false-allow: body mode swallowed the following bad commit) …
+HERESTRING_BAD=$'jq . <<<foo\ngit commit -m "added stuff"'
+check "block after here-string" validate-commit-msg.sh 2 "$(p_cmd "$HERESTRING_BAD")" "Conventional Commits"
+# … an arithmetic literal shift is not an opener either (guard must not
+# break a normal command) …
+ARITH_GOOD=$'x=$((1<<8))\ngit commit -m "feat: shift ok"'
+check "allow arithmetic shift"  validate-commit-msg.sh 0 "$(p_cmd "$ARITH_GOOD")"
+# … CRLF closers still close (was a false-allow: body never ended) …
+CRLF_BAD=$'cat > f <<EOF\r\n{\r\nEOF\r\ngit commit -m "added stuff"'
+check "block CRLF heredoc+bad"  validate-commit-msg.sh 2 "$(p_cmd "$CRLF_BAD")" "Conventional Commits"
+# … and a tab-indented tag line inside a PLAIN heredoc body does NOT close it
+# (unconditional tab-strip re-opened the body and false-blocked).
+PLAIN_TABTAG_GOOD=$'cat > f <<EOF\n\tEOF\ngit commit -m "not real, still body"\nEOF\ngit commit -m "feat: real one"'
+check "allow plain tab-tag body" validate-commit-msg.sh 0 "$(p_cmd "$PLAIN_TABTAG_GOOD")"
 
 # --- ban-background (build/test block + watcher allow) ---
 check "block bg test"     ban-background.sh 2 "$(p_bg "npm test" true)" "background"
