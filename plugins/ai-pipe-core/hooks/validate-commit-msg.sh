@@ -39,23 +39,22 @@ CMD=$(jq -r '.tool_input.command // empty' <<<"$INPUT")
 
 MSG=""
 
-# Case A (highest priority): heredoc form `$(cat <<'TAG' ... TAG)`.
+# Case A (highest priority): heredoc form `-m "$(cat <<'TAG' ... TAG)"`.
 # Must be checked FIRST so the opening `$(cat ...` isn't captured as a bare
-# token by Case B/C/D. The tag is captured so we can find the closing line.
+# token by Case B/C/D.
 #
-# Regex note: the `\<` backslashes are historical — bash ERE treats both `<`
-# and `\<` as literal `<` (POSIX ERE: `<` is not a metachar; `\<` is undefined
-# and falls back to literal). Earlier round commit messages announced removing
-# the backslashes but never did; the two forms are functionally identical on
-# every bash build we test (3.2 and 5.x). Kept as-is to avoid changing a
-# semantic we don't strictly own across all libc regex implementations.
-if [[ "$CMD" =~ \<\<-?[\'\"]*([A-Za-z_][A-Za-z0-9_]*)[\'\"]* ]]; then
-  HEREDOC_TAG="${BASH_REMATCH[1]}"
-  MSG=$(printf '%s\n' "$CMD" \
-    | TAG="$HEREDOC_TAG" awk '
-      $0 ~ ("<<-?[\"'\''A-Za-z_]*" ENVIRON["TAG"]) { found_open = 1; next }
-      found_open && NF { print; exit }
-    ')
+# ANCHORED to the message flag (dogfood finding): an unanchored `<<TAG` match
+# fired on ANY heredoc in a compound command — e.g. `cat > pkg.json <<'EOF'
+# { ... } EOF && git commit -m "chore: x"` extracted `{` as the subject and
+# false-blocked. The construct must be `-m`/`-am`/`--message` followed by
+# `"$(cat <<TAG`. The subject is then taken from the text right after the
+# matched opener (no tag re-search — immune to same-tag file heredocs).
+CASE_A_RE='(^|[[:space:]])(-[a-zA-Z]*m|--message)[[:space:]]*=?[[:space:]]*\"?\$\(cat[[:space:]]+<<-?['"'"'\"]*([A-Za-z_][A-Za-z0-9_]*)'
+if [[ "$CMD" =~ $CASE_A_RE ]]; then
+  rest="${CMD#*"${BASH_REMATCH[0]}"}"
+  # Drop the remainder of the opener line (closing quote etc.); the subject is
+  # the first non-empty line after it.
+  MSG=$(printf '%s\n' "$rest" | tail -n +2 | awk 'NF { print; exit }')
 fi
 
 # Case B: --message="msg" or --message "msg" (quoted long form).
@@ -78,12 +77,14 @@ fi
 # long flags like `--merge`, `--max-count`, `--reuse-message`. BASH_REMATCH[1]
 # is the anchor, [2] is the message — note the shift from the unanchored form.
 if [[ -z "$MSG" ]]; then
-  if [[ "$CMD" =~ (^|[[:space:]])-[aA]?m[[:space:]]*\"([^\"]+)\" ]]; then
+  # `-[a-zA-Z]*m` also parses BUNDLED short flags ending in m (`-qm "..."`,
+  # `-sm "..."` — dogfood finding: `-qm` previously fell through unparsed).
+  if [[ "$CMD" =~ (^|[[:space:]])-[a-zA-Z]*m[[:space:]]*\"([^\"]+)\" ]]; then
     CANDIDATE="${BASH_REMATCH[2]}"
     # Defensive: if the captured value starts with `$(` it's likely the head
     # of a subshell/heredoc that Case A failed to parse. Treat as no message.
     [[ "$CANDIDATE" != \$\(* ]] && MSG="$CANDIDATE"
-  elif [[ "$CMD" =~ (^|[[:space:]])-[aA]?m[[:space:]]*\'([^\']+)\' ]]; then
+  elif [[ "$CMD" =~ (^|[[:space:]])-[a-zA-Z]*m[[:space:]]*\'([^\']+)\' ]]; then
     MSG="${BASH_REMATCH[2]}"
   fi
 fi

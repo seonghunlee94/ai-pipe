@@ -80,6 +80,15 @@ check "block --message no type" validate-commit-msg.sh 2 "$(p_cmd 'git commit --
 check "block over-long subject" validate-commit-msg.sh 2 "$(p_cmd "git commit -m \"feat: $LONG_SUBJECT\"")" "length"
 check "block trailing period"   validate-commit-msg.sh 2 "$(p_cmd 'git commit -m "feat: ends here."')" "period"
 check "ignore non-commit"       validate-commit-msg.sh 0 "$(p_cmd "ls -la")"
+# Dogfood regressions: a FILE-creation heredoc in a compound command must not
+# be mistaken for the commit message (Case A is anchored to -m "$(cat <<TAG).
+FILE_HEREDOC_GOOD=$'cat > pkg.json <<\'EOF\'\n{\n  "a": 1\n}\nEOF\ngit commit -m "chore: scaffold"'
+FILE_HEREDOC_BAD=$'cat > pkg.json <<\'EOF\'\n{\n  "a": 1\n}\nEOF\ngit commit -m "added stuff"'
+check "allow file-heredoc+good" validate-commit-msg.sh 0 "$(p_cmd "$FILE_HEREDOC_GOOD")"
+check "block file-heredoc+bad"  validate-commit-msg.sh 2 "$(p_cmd "$FILE_HEREDOC_BAD")" "Conventional Commits"
+# Bundled short flags ending in m (-qm/-sm) now parse via Case C.
+check "allow -qm conventional"  validate-commit-msg.sh 0 "$(p_cmd 'git commit -qm "feat: bundled flag"')"
+check "block -qm non-type"      validate-commit-msg.sh 2 "$(p_cmd 'git commit -qm "added a thing"')" "Conventional Commits"
 
 # --- ban-background (build/test block + watcher allow) ---
 check "block bg test"     ban-background.sh 2 "$(p_bg "npm test" true)" "background"
