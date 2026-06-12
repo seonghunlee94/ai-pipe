@@ -2,7 +2,7 @@
 
 Claude Code 기반 멀티 에이전트 자동화 파이프라인. **Claude Code Plugin Marketplace**로 배포하여 다양한 프로젝트·머신에서 공유 가능하고, 프로젝트별 설정과 GitHub Issues/Projects V2 연동을 지원한다.
 
-> **현재 상태: DEV1–7 아크 + §6 실증 라운드 완료**. 12개 에이전트 전부 정의, spec→plan→execute→verify 파이프라인 체인, PreToolUse 6종 + SessionStart/SessionEnd 훅, CLI 12개 명령, Concordance Gate·오류 분류기, 5-레이어 테스트 스위트 + CI. **플러그인 설치 실증 완료** — `claude plugin install` 로 Skills 9/Agents 12/Hooks 3그룹/MCP 1 전부 로드 확인 (§6 참조). 남은 것: 라이선스 선택 → 버전·태그 (§0 체크리스트). 자세한 설계는 [`multi-agent-pipeline-best-practices.md`](./multi-agent-pipeline-best-practices.md).
+> **현재 상태: DEV1–7 + §6 실증 + 실사용(dogfood) 라운드 완료 — 파이프라인 end-to-end SHIP 실증**. 12개 에이전트, spec→plan→execute→verify 체인이 설치된 플러그인으로 실제 기능 1개를 완주(verifier 판정 SHIP, §6 참조). PreToolUse 6종 + SessionStart/SessionEnd 훅, CLI 12개 명령, Concordance Gate·오류 분류기, 5-레이어 테스트 스위트 + CI. 남은 것: 라이선스 선택 → 버전·태그 (§0 체크리스트). 자세한 설계는 [`multi-agent-pipeline-best-practices.md`](./multi-agent-pipeline-best-practices.md).
 
 ---
 
@@ -32,7 +32,7 @@ grep -rl 'your-org' . --include='*.json' --include='*.md' --include='*.ts' --inc
 
 1. **라이선스 결정** — 현재 `UNLICENSED`(private, 의도된 상태). 공개 전 라이선스(MIT/Apache-2.0 등)를 **사용자가 직접 선택**해 `LICENSE` 파일 추가 + `package.json` `license` 갱신 (§7).
 2. **placeholder 치환** — 위 sed 스윕 실행 → `npm run build`(dist 재생성) → `node dist/cli.js validate . --strict` 로 잔여 `your-org/` 경고 0 확인.
-3. ~~**§6 실증 라운드**~~ — **완료 (2026-06-11)**: `claude plugin marketplace add` + `install` 실행으로 원래 10건 중 8건 판정(확정 4·수정 4) + 신규 1건(owner) 수정 (§6 결과 참조). 잔여 2건(adp-watch PATH, usage 페이로드)은 실사용 라운드로 이월.
+3. ~~**§6 실증 라운드**~~ — **완료**: 설치 실증(2026-06-11 — 8건 판정 + 신규 owner 결함 수정) + 실사용 dogfood(2026-06-12 — 이월 2건 판정, 결함 3건 수정, 파이프라인 E2E SHIP). §6 결과 참조.
 4. **버전·태그** — `package.json`/`plugin.json`/`marketplace.json` 버전 정렬 후 `git tag v<X.Y.Z>` push → publish workflow 가 `npm test` 게이트 통과 시 GitHub Packages 로 배포.
 
 ---
@@ -177,6 +177,8 @@ PreToolUse 차단 훅 6종(verify-boundary, verify-git-safety, validate-commit-m
 /verify {slug}                             # qa→test-*→reviewer→verifier → ship / no-ship 결정
 ```
 
+> `/verify` 가 다른 verify 스킬과 이름이 겹치는 환경에서는 네임스페이스 형태 `/ai-pipe-core:verify {slug}` 로 호출한다 (dogfood 실측).
+
 - 산출물은 `.artifacts/`(specs/plans/runs) 아래에 떨어진다. 실행 이벤트는 `.artifacts/runs/{slug}-events.jsonl`, 진행/비용은 `${CLAUDE_PLUGIN_ROOT}/bin/adp-watch {slug}`.
 - 로컬 단독(GitHub 미연동) 실행은 `config/pipeline.json` 의 `local_defaults`(story/issue=1)로 impl-agent-input 을 채운다. GitHub Issues/Projects 연동은 project-ops 에이전트가 담당.
 - impl 에이전트 3종(backend/frontend/infra-eng)이 모두 정의됨 — plan 의 task 가 어느 레이어든 execute-plan 이 fan-out 한다. 검증 단계는 `/verify {slug}` 가 qa→test-*(직렬)→reviewer→verifier 를 오케스트레이션해 ship/no-ship 을 보고한다 (Concordance Gate 입력은 execute-plan 이 영속화한 `.artifacts/runs/{slug}-impl-outputs/*.json`).
@@ -240,9 +242,19 @@ Windows는 현재 미지원 (Bash 훅 의존). WSL 사용 권장.
 - SKILL.md frontmatter (`paths`/`disable-model-invocation`/`user-invocable`/`argument-hint`/`allowed-tools`) — 전부 공식 필드. agent frontmatter **`isolation: worktree`** 도 공식 필드 (worktree 격리의 유일한 공식 경로).
 - `SessionStart` stdout 컨텍스트 주입 — 공식 문서 확인 ("stdout is added as context for Claude").
 
-**잔여 미확정 (2건 — 실사용 라운드로 이월):**
-- `bin/adp-watch` PATH 등록 — plugin 이 `bin/` 을 PATH 에 올리는지 미확인. 현행대로 `${CLAUDE_PLUGIN_ROOT}/bin/adp-watch` 전체 경로 호출 유지.
-- observability `usage` 페이로드·cache_control·단가표 — subagent 토큰 usage 회수 가능 여부는 실제 파이프라인 실행에서 확인. `adp-watch` 단가표(Opus $15/$75, Sonnet $3/$15, Haiku $1/$5)는 2026-06 추정치.
+**이월 2건 — 실사용(dogfood) 라운드에서 판정 완료 (2026-06-12):**
+- `bin/adp-watch` PATH 등록 — **미등록 확정** (플러그인 활성 세션에서 `command -v adp-watch` 실패). `${CLAUDE_PLUGIN_ROOT}/bin/adp-watch` 전체 경로 호출이 영구 정답.
+- observability `usage` 페이로드 — **오케스트레이터 레벨에서 회수 불가 확정** (실제 run 의 `task_done` 에 usage 없음 — LLM 오케스트레이터는 subagent 토큰 수를 알 수 없다). `adp-watch --cost` 는 0 누적 유지(문서화된 fallback). 단가표는 추정치로 존치.
+
+### 실사용(dogfood) 라운드 결과 (2026-06-12)
+
+스크래치 프로젝트에서 설치된 플러그인으로 실제 기능 1개(todo-file-store, 3 REQ)를 `/create-spec → /design-plan → /execute-plan → /verify` 전체 체인으로 완주 — **verifier 최종 판정 SHIP** (Concordance Gate exit 0, 10/10 테스트, reviewer minor 2·nit 2·blocker 0). worktree 격리 fan-out, 직렬 merge, impl-outputs 영속화, 이벤트 기록, 정리(브랜치/worktree 제거)까지 전부 실동작 확인. 발견·수정된 결함 3건:
+
+1. **`validate-subagent-type.sh` 가 모든 플러그인 에이전트 호출을 차단** — Agent tool 은 `{plugin}:{agent}`(`ai-pipe-core:pm`) 형태로 호출하는데 allowlist 는 bare 이름 — prefix 벗겨 비교하도록 수정 (+2 하네스 케이스).
+2. **`validate-commit-msg.sh` heredoc 오탐** — 복합 명령의 파일 생성용 `cat <<EOF` 를 commit 메시지로 오인해 정상 commit 을 차단. Case A 를 `-m "$(cat <<TAG` 구조에 앵커 + 번들 플래그(`-qm`) 파싱 추가 (+4 하네스 케이스).
+3. **이벤트 키 드리프트** — LLM 오케스트레이터가 `type` 대신 `event` 키로 기록(훅이 쓴 줄은 준수) → adp-watch 가 `· ?` 렌더. 생산자(스킬에 정확한 라인 예시 인라인) + 소비자(`.type // .event` 관용) 양면 수정.
+
+추가 실증 데이터: 디렉토리-소스 marketplace 설치에서 `${CLAUDE_PLUGIN_ROOT}` 는 **소스 디렉토리를 직접** 가리킨다(캐시 미사용) — repo 수정이 재설치 없이 즉시 반영. `/verify` 는 내장 verify 스킬과 이름이 겹쳐 **`/ai-pipe-core:verify`** 네임스페이스 호출이 필요할 수 있다.
 
 ---
 
