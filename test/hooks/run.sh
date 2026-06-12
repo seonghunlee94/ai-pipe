@@ -122,14 +122,23 @@ check "allow env auth"      secrets-scan.sh 0 "$(p_sbash 'curl -H "Authorization
 check "allow plain content" secrets-scan.sh 0 "$(p_swrite "const x = 1; // nothing secret here")"
 
 # --- hooks.json wiring integrity ---
-# hooks.json must parse, and every ${CLAUDE_PLUGIN_ROOT}/hooks/*.sh it
-# references must exist and be executable — catches future wiring drift
-# (renamed scripts, a DIR/ROOT-style variable regression) at test time.
+# hooks.json must parse, enumerate the EXPECTED number of commands, and every
+# ${CLAUDE_PLUGIN_ROOT}/hooks/*.sh it references must exist and be executable —
+# catches wiring drift (renamed scripts, a DIR/ROOT-style variable regression,
+# and SHAPE drift: jq output is captured with its exit code checked, and the
+# count is pinned, so a structure change can never enumerate 0 and pass
+# vacuously — the failure mode a `< <(jq …)` process substitution would hide).
+EXPECTED_WIRED_COMMANDS=9 # 6 PreToolUse (2 Edit|Write + 4 Bash... see hooks.json) + Agent 1 + SessionStart 1 + SessionEnd 1
 WIRING_OK=1
-if ! jq empty "$HOOKS/hooks.json" 2>/dev/null; then
+if ! cmds=$(jq -re '.hooks[][].hooks[].command' "$HOOKS/hooks.json" 2>&1); then
   WIRING_OK=0
-  echo "FAIL  hooks.json does not parse"
+  echo "FAIL  hooks.json does not parse / unexpected shape: ${cmds%%$'\n'*}"
 else
+  count=$(printf '%s\n' "$cmds" | grep -c .)
+  if [[ "$count" -ne "$EXPECTED_WIRED_COMMANDS" ]]; then
+    WIRING_OK=0
+    echo "FAIL  hooks.json wiring: enumerated $count commands, expected $EXPECTED_WIRED_COMMANDS (update the constant if wiring intentionally changed)"
+  fi
   while IFS= read -r cmd; do
     script="${cmd//\$\{CLAUDE_PLUGIN_ROOT\}/$CLAUDE_PLUGIN_ROOT}"
     if [[ "$script" == *'${'* ]]; then
@@ -139,7 +148,7 @@ else
       WIRING_OK=0
       echo "FAIL  hooks.json references a missing/non-executable script: $cmd"
     fi
-  done < <(jq -r '.hooks[][] .hooks[].command' "$HOOKS/hooks.json")
+  done <<<"$cmds"
 fi
 if [[ "$WIRING_OK" == 1 ]]; then PASS=$((PASS + 1)); else FAIL=$((FAIL + 1)); fi
 
