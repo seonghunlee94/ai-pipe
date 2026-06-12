@@ -34,8 +34,25 @@ fi
 INPUT=$(cat)
 CMD=$(jq -r '.tool_input.command // empty' <<<"$INPUT")
 
-# Only target git commit invocations.
-[[ "$CMD" =~ git[[:space:]]+commit ]] || exit 0
+# Strip heredoc BODIES before any scanning (dogfood finding, round 2): a
+# file-creation heredoc whose BODY merely *quotes* commit-like text — e.g.
+# writing a test fixture or doc that contains `git commit -m "$(cat <<EOF` —
+# must trigger neither the gate nor any Case. Opener lines are KEPT (Case A
+# anchors on them); body lines through the closing tag line are dropped.
+# BSD-awk-safe (no gawk match arrays); `<<-` closers may be tab-indented.
+CMD_SCAN=$(printf '%s\n' "$CMD" | awk '
+  inbody { line = $0; sub(/^\t+/, "", line); if (line == tag) inbody = 0; next }
+  /<<-?['\''"]?[A-Za-z_]/ {
+    t = $0
+    sub(/.*<<-?['\''"]?/, "", t)
+    sub(/[^A-Za-z0-9_].*/, "", t)
+    tag = t; inbody = 1; print; next
+  }
+  { print }
+')
+
+# Only target git commit invocations (in real command text, not heredoc bodies).
+[[ "$CMD_SCAN" =~ git[[:space:]]+commit ]] || exit 0
 
 MSG=""
 
@@ -50,24 +67,30 @@ MSG=""
 # `"$(cat <<TAG`. The subject is then taken from the text right after the
 # matched opener (no tag re-search — immune to same-tag file heredocs).
 CASE_A_RE='(^|[[:space:]])(-[a-zA-Z]*m|--message)[[:space:]]*=?[[:space:]]*\"?\$\(cat[[:space:]]+<<-?['"'"'\"]*([A-Za-z_][A-Za-z0-9_]*)'
-if [[ "$CMD" =~ $CASE_A_RE ]]; then
+if [[ "$CMD_SCAN" =~ $CASE_A_RE ]]; then
+  # Anchor located on the body-stripped scan; the SUBJECT lives in the body,
+  # so extract from the ORIGINAL command after the same opener text. (Leftmost
+  # #-strip could land on an identical literal inside an earlier body — an
+  # accepted residual; real openers precede their own bodies.)
   rest="${CMD#*"${BASH_REMATCH[0]}"}"
   # Drop the remainder of the opener line (closing quote etc.); the subject is
-  # the first non-empty line after it.
-  MSG=$(printf '%s\n' "$rest" | tail -n +2 | awk 'NF { print; exit }')
+  # the first non-empty line after it. Leading tabs are stripped — a `<<-`
+  # heredoc legitimately tab-indents its body (dogfood round 2: a valid
+  # tab-indented `feat: …` was false-blocked).
+  MSG=$(printf '%s\n' "$rest" | tail -n +2 | awk 'NF { sub(/^\t+/, ""); print; exit }')
 fi
 
 # Case B: --message="msg" or --message "msg" (quoted long form).
 # Left-anchored `(^|[[:space:]])` for the same defensive reason as Case C/D:
 # unanchored `--message=` could match substrings of unknown future flags.
 if [[ -z "$MSG" ]]; then
-  if [[ "$CMD" =~ (^|[[:space:]])--message=\"([^\"]+)\" ]]; then
+  if [[ "$CMD_SCAN" =~ (^|[[:space:]])--message=\"([^\"]+)\" ]]; then
     MSG="${BASH_REMATCH[2]}"
-  elif [[ "$CMD" =~ (^|[[:space:]])--message=\'([^\']+)\' ]]; then
+  elif [[ "$CMD_SCAN" =~ (^|[[:space:]])--message=\'([^\']+)\' ]]; then
     MSG="${BASH_REMATCH[2]}"
-  elif [[ "$CMD" =~ (^|[[:space:]])--message[[:space:]]+\"([^\"]+)\" ]]; then
+  elif [[ "$CMD_SCAN" =~ (^|[[:space:]])--message[[:space:]]+\"([^\"]+)\" ]]; then
     MSG="${BASH_REMATCH[2]}"
-  elif [[ "$CMD" =~ (^|[[:space:]])--message[[:space:]]+\'([^\']+)\' ]]; then
+  elif [[ "$CMD_SCAN" =~ (^|[[:space:]])--message[[:space:]]+\'([^\']+)\' ]]; then
     MSG="${BASH_REMATCH[2]}"
   fi
 fi
@@ -79,12 +102,12 @@ fi
 if [[ -z "$MSG" ]]; then
   # `-[a-zA-Z]*m` also parses BUNDLED short flags ending in m (`-qm "..."`,
   # `-sm "..."` — dogfood finding: `-qm` previously fell through unparsed).
-  if [[ "$CMD" =~ (^|[[:space:]])-[a-zA-Z]*m[[:space:]]*\"([^\"]+)\" ]]; then
+  if [[ "$CMD_SCAN" =~ (^|[[:space:]])-[a-zA-Z]*m[[:space:]]*\"([^\"]+)\" ]]; then
     CANDIDATE="${BASH_REMATCH[2]}"
     # Defensive: if the captured value starts with `$(` it's likely the head
     # of a subshell/heredoc that Case A failed to parse. Treat as no message.
     [[ "$CANDIDATE" != \$\(* ]] && MSG="$CANDIDATE"
-  elif [[ "$CMD" =~ (^|[[:space:]])-[a-zA-Z]*m[[:space:]]*\'([^\']+)\' ]]; then
+  elif [[ "$CMD_SCAN" =~ (^|[[:space:]])-[a-zA-Z]*m[[:space:]]*\'([^\']+)\' ]]; then
     MSG="${BASH_REMATCH[2]}"
   fi
 fi
@@ -97,14 +120,14 @@ fi
 # Same left-anchor discipline as Case C so `--merge` / `--max-count=10` etc.
 # don't get their inner `m` captured (round-2 regression).
 if [[ -z "$MSG" ]]; then
-  if [[ "$CMD" =~ (^|[[:space:]])--message=([^[:space:]\'\"]+) ]]; then
+  if [[ "$CMD_SCAN" =~ (^|[[:space:]])--message=([^[:space:]\'\"]+) ]]; then
     MSG="${BASH_REMATCH[2]}"
-  elif [[ "$CMD" =~ (^|[[:space:]])--message[[:space:]]+([^[:space:]\'\"-][^[:space:]\'\"]*) ]]; then
+  elif [[ "$CMD_SCAN" =~ (^|[[:space:]])--message[[:space:]]+([^[:space:]\'\"-][^[:space:]\'\"]*) ]]; then
     MSG="${BASH_REMATCH[2]}"
-  elif [[ "$CMD" =~ (^|[[:space:]])-[aA]?m([A-Za-z0-9][^[:space:]\'\"]*) ]]; then
+  elif [[ "$CMD_SCAN" =~ (^|[[:space:]])-[a-zA-Z]*m([A-Za-z0-9][^[:space:]\'\"]*) ]]; then
     # -mTOKEN (no space). Don't match -m alone or -m followed by quote.
     MSG="${BASH_REMATCH[2]}"
-  elif [[ "$CMD" =~ (^|[[:space:]])-[aA]?m[[:space:]]+([^[:space:]\'\"-][^[:space:]\'\"]*) ]]; then
+  elif [[ "$CMD_SCAN" =~ (^|[[:space:]])-[a-zA-Z]*m[[:space:]]+([^[:space:]\'\"-][^[:space:]\'\"]*) ]]; then
     # -m TOKEN (space + bare token, not starting with - to avoid flags).
     MSG="${BASH_REMATCH[2]}"
   fi

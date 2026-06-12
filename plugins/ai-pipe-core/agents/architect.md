@@ -24,16 +24,17 @@ tools:
 
 ## 절차
 
-1. `.artifacts/specs/{slug}-spec.md` 를 읽는다. 없으면 `ENV_FAILURE` 로 escalate (절차 6의 실패 JSON).
+1. `.artifacts/specs/{slug}-spec.md` 를 읽는다. 없으면 `ENV_FAILURE` 로 escalate (절차 7의 실패 JSON).
 2. spec 의 모든 `REQ-N` 을 추출한다 (`grep -oE 'REQ-[0-9]+'`).
-3. 요구사항을 **task 로 분해**한다. 각 task 는:
+3. **기존 스택 확인**: 프로젝트의 매니페스트(`package.json` 등)와 이미 설치된 도구 체인(테스트 러너, 린터, 빌드)을 읽고, 기술 결정은 **기존 스택을 따른다** — 새 도구 도입은 spec 이 명시할 때만. (dogfood: 스캐폴드에 vitest 가 있는데 plan 이 `node:test` 를 지정해 plan/impl 드리프트 발생 — impl 이 현실을 따랐고 reviewer 가 드리프트를 잡았다. architect 가 처음부터 읽었어야 한다.)
+4. 요구사항을 **task 로 분해**한다. 각 task 는:
    - 하나의 impl 에이전트(`backend-eng`/`frontend-eng`/`infra-eng`)가 담당할 수 있는 응집된 단위.
    - 하나 이상의 REQ-N 을 커버 (`covers`).
    - 데이터/계약 의존이 있으면 `depends_on` 으로 표현 (예: 프론트는 API task 에 의존). 순환 금지 (DAG).
    - 레이어로 에이전트 배정: API·비즈니스·데이터 → backend-eng, UI → frontend-eng, CI·배포·인프라 → infra-eng.
-4. **커버리지 검증** (양방향): (a) 모든 spec REQ-N 이 최소 하나의 task 에 매핑되는지, (b) 각 task 의 `covers` 가 실제 spec 에 존재하는 REQ 인지(orphan covers 금지) 확인. 매핑 불가능한 REQ(설계 정보 부족, 자기모순)가 있으면 plan 을 내지 말고 `DESIGN_GAP` 으로 escalate (실패 JSON + 누락 REQ 목록).
-5. plan 을 `${CLAUDE_PLUGIN_ROOT}/shared/formats/plan-format.md` 의 정규 템플릿과 규칙(rule 1–8)을 그대로 따라 `.artifacts/plans/{slug}-plan.md` 에 작성한다 (`mkdir -p .artifacts/plans`). 표 컬럼·셀 제약은 그 문서가 SSOT.
-6. 출력 JSON 을 표준 출력에 작성한다.
+5. **커버리지 검증** (양방향): (a) 모든 spec REQ-N 이 최소 하나의 task 에 매핑되는지, (b) 각 task 의 `covers` 가 실제 spec 에 존재하는 REQ 인지(orphan covers 금지) 확인. 매핑 불가능한 REQ(설계 정보 부족, 자기모순)가 있으면 plan 을 내지 말고 `DESIGN_GAP` 으로 escalate (실패 JSON + 누락 REQ 목록).
+6. plan 을 `${CLAUDE_PLUGIN_ROOT}/shared/formats/plan-format.md` 의 정규 템플릿과 규칙(rule 1–8)을 그대로 따라 `.artifacts/plans/{slug}-plan.md` 에 작성한다 (`mkdir -p .artifacts/plans`). 표 컬럼·셀 제약은 그 문서가 SSOT.
+7. 출력 JSON 을 표준 출력에 작성한다.
 
 ## 출력
 

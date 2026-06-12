@@ -30,6 +30,8 @@ REQUESTED=$(jq -r '.tool_input.subagent_type // empty' <<<"$INPUT")
 
 # Plugin agents are addressed as '{plugin}:{agent}' in the Agent tool, but the
 # allowlist below is built from .md basenames — compare against the bare name.
+# The PREFIX itself is deliberately not validated: a wrong/typo'd prefix fails
+# loudly at Agent dispatch anyway; this hook gates typo'd agent NAMES.
 REQUESTED_BASE="${REQUESTED##*:}"
 
 # Built-in agents that don't need a .md file.

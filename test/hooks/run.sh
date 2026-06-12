@@ -89,6 +89,17 @@ check "block file-heredoc+bad"  validate-commit-msg.sh 2 "$(p_cmd "$FILE_HEREDOC
 # Bundled short flags ending in m (-qm/-sm) now parse via Case C.
 check "allow -qm conventional"  validate-commit-msg.sh 0 "$(p_cmd 'git commit -qm "feat: bundled flag"')"
 check "block -qm non-type"      validate-commit-msg.sh 2 "$(p_cmd 'git commit -qm "added a thing"')" "Conventional Commits"
+check "block -qm bare token"    validate-commit-msg.sh 2 "$(p_cmd 'git commit -qm fixstuff')" "Conventional Commits"
+# Heredoc BODY that merely QUOTES commit-like text (writing fixtures/docs)
+# must not trigger the gate or any Case (dogfood round 2 — self-hosting).
+BODY_LITERAL_NO_COMMIT=$'cat > fixture.sh <<\'EOF\'\ngit commit -m "$(cat <<TAG\nnot a real subject\nTAG\n)"\nEOF'
+BODY_LITERAL_THEN_BAD=$'cat > fixture.sh <<\'EOF\'\ngit commit -m "$(cat <<TAG\nnot a real subject\nTAG\n)"\nEOF\ngit commit -m "added stuff"'
+check "allow body-literal only" validate-commit-msg.sh 0 "$(p_cmd "$BODY_LITERAL_NO_COMMIT")"
+check "block after body-literal" validate-commit-msg.sh 2 "$(p_cmd "$BODY_LITERAL_THEN_BAD")" "Conventional Commits"
+# `<<-` heredoc legitimately tab-indents its body — leading tab must be
+# stripped from the subject, not false-blocked.
+HEREDOC_TABBED=$'git commit -m "$(cat <<-\'EOF\'\n\tfeat: tabbed subject\n\tEOF\n)"'
+check "allow <<- tabbed subject" validate-commit-msg.sh 0 "$(p_cmd "$HEREDOC_TABBED")"
 
 # --- ban-background (build/test block + watcher allow) ---
 check "block bg test"     ban-background.sh 2 "$(p_bg "npm test" true)" "background"
@@ -109,6 +120,9 @@ check "block bogus agent" validate-subagent-type.sh 2 "$(p_subagent "totally-mad
 # EVERY plugin agent dispatch).
 check "allow namespaced agent" validate-subagent-type.sh 0 "$(p_subagent "ai-pipe-core:pm")"
 check "block namespaced bogus" validate-subagent-type.sh 2 "$(p_subagent "ai-pipe-core:totally-made-up")" "not registered"
+# Prefix is deliberately NOT validated (a wrong prefix fails loudly at Agent
+# dispatch; this hook gates typo'd agent NAMES) — pin the looseness.
+check "allow foreign prefix"   validate-subagent-type.sh 0 "$(p_subagent "some-other-plugin:pm")"
 
 # --- secrets-scan (token families + auth) ---
 # Secret-pattern fixtures are ASSEMBLED AT RUNTIME from a prefix + a repeated

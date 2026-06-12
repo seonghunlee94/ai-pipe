@@ -93,6 +93,18 @@ STDIN="--- FAIL: TestFoo (0.01s)" \
 STDIN=$'FAIL\texample.com/pkg\t0.123s' \
   check "classify: go FAIL tab"  1 '"TEST_FAIL"'        -- bash "$K"
 
+# ---------- adp-watch event rendering (dogfood regression) ----------
+# The canonical key is `type`; LLM-written events drifted to `event` in the
+# wild. The viewer must render BOTH (and never degrade a run to `· ?`).
+ADP="$REPO_ROOT/plugins/ai-pipe-core/bin/adp-watch"
+mkdir -p "$TMP/.artifacts/runs"
+printf '%s\n' \
+  '{"ts":"T1","event":"task_start","task_id":"T-1","agent":"backend-eng"}' \
+  '{"ts":"T2","type":"task_done","task_id":"T-1","status":"success"}' \
+  > "$TMP/.artifacts/runs/drift-events.jsonl"
+check "adp-watch: drifted key"   0 "▶ T-1 (backend-eng)" -- bash -c "cd '$TMP' && bash '$ADP' drift --replay"
+check "adp-watch: canonical key" 0 "✔ T-1 success"        -- bash -c "cd '$TMP' && bash '$ADP' drift --replay"
+
 # ---------- §8 taxonomy sync (N16) ----------
 # The classifier hardcodes the common-agent-rules §8 categories and its header
 # demands "keep the two in sync" — assert it BOTH ways so adding/renaming a
