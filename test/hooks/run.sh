@@ -128,7 +128,7 @@ check "allow plain content" secrets-scan.sh 0 "$(p_swrite "const x = 1; // nothi
 # and SHAPE drift: jq output is captured with its exit code checked, and the
 # count is pinned, so a structure change can never enumerate 0 and pass
 # vacuously — the failure mode a `< <(jq …)` process substitution would hide).
-EXPECTED_WIRED_COMMANDS=9 # 6 PreToolUse (2 Edit|Write + 4 Bash... see hooks.json) + Agent 1 + SessionStart 1 + SessionEnd 1
+EXPECTED_WIRED_COMMANDS=9 # 7 PreToolUse (2 Edit|Write + 4 Bash + 1 Agent) + 1 SessionStart + 1 SessionEnd
 WIRING_OK=1
 if ! cmds=$(jq -re '.hooks[][].hooks[].command' "$HOOKS/hooks.json" 2>&1); then
   WIRING_OK=0
@@ -144,7 +144,8 @@ else
     if [[ "$script" == *'${'* ]]; then
       WIRING_OK=0
       echo "FAIL  hooks.json command uses an unknown variable: $cmd"
-    elif [[ ! -x "$script" ]]; then
+    elif [[ ! -f "$script" || ! -x "$script" ]]; then
+      # -f guards against a directory passing the -x test (dirs are executable)
       WIRING_OK=0
       echo "FAIL  hooks.json references a missing/non-executable script: $cmd"
     fi
