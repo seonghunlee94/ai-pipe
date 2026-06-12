@@ -30,7 +30,7 @@ allowed-tools:
 2. **qa 디스패치** (`Agent`, `subagent_type: qa`): slug 와 impl 출력 요약을 전달. qa 는 REQ-N 별 수용 기준을 정의하고 필요한 test-* 레이어를 결정·**직렬** 디스패치한다 (qa 정의 참조 — test 에이전트들은 worktree 격리가 없어 병렬 금지). qa 출력의 `uncovered_reqs` 가 비어 있지 않으면 그 사실을 verifier 입력에 포함.
 3. **reviewer 디스패치** (`subagent_type: reviewer`): plan 헤더의 `feature_branch` 와 비교 base(`vcs.default_branch`)를 전달. 출력 findings/verdict 수집.
 4. **verifier 디스패치** (`subagent_type: verifier`): slug + impl 출력 파일 경로들 + qa/test 결과 + reviewer 출력을 전달. **impl 출력은 step 1 에서 읽은 현재 plan 의 `task_id` 에 해당하는 `{task_id}.json` 만 골라 전달**한다 — 디렉토리 glob 전체를 넘기면 개정 전 plan 의 잔존 파일(삭제·개명된 task)이 커버리지를 거짓 주장해 게이트를 오염시킨다. verifier 는 Concordance Gate(`scripts/validate/validate-impl-concordance.sh`)와 세 신호를 종합해 `{decision: ship|no-ship, blockers, concordance}` 를 반환.
-5. **이벤트 기록**: `.artifacts/runs/{slug}-events.jsonl` 에 `phase_start`/`phase_done` (phase: "verify") 및 각 에이전트의 `task_start`/`task_done` 을 append (`mkdir -p .artifacts/runs` 선행, spec §12.1).
+5. **이벤트 기록**: `.artifacts/runs/{slug}-events.jsonl` 에 `phase_start`/`phase_done` (phase: "verify") 및 각 에이전트의 `task_start`/`task_done` 을 append (`mkdir -p .artifacts/runs` 선행). **이벤트 종류 키는 정확히 `type`** (`event` 아님): `{"ts":"...","type":"phase_start","phase":"verify"}` — 전체 표는 `observability` skill §1 (spec §12.1).
 6. **보고**: decision, blockers(있으면 출처별), concordance 요약, 추가된 테스트 수를 사용자에게 보고. no-ship 이면 다음 행동(architect 회부 / impl 재작업 task)을 제안.
 
 ## 실패 처리

@@ -49,8 +49,11 @@ print_event() {
   local line="$1"
   # Extract every displayed field in ONE jq call (avoids ~6 forks/line on the
   # live path). A partial/invalid line yields no output and is skipped.
+  # `.type // .event`: the canonical key is `type` (observability skill §1) but
+  # LLM-written orchestrator events have drifted to `event` in the wild —
+  # tolerate the synonym on read so a whole run isn't rendered as `· ?`.
   local fields
-  fields=$(jq -r '[.ts // "?", .type // "?", (.phase // "?"|tostring),
+  fields=$(jq -r '[.ts // "?", .type // .event // "?", (.phase // "?"|tostring),
                    .task_id // "?", .agent // "?", .status // "?",
                    (.attempt // "?"|tostring), .category // "?",
                    .to // "human", .branch // "?",
