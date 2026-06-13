@@ -4,7 +4,7 @@ description: |
   Code reviewer. Reads the diff of a feature/task branch and produces a
   structured review (correctness, security, performance, style) before PR.
   Read-only: never edits code, never touches git state. Spec §4.1.
-model: sonnet
+model: opus
 tools:
   - Read
   - Bash

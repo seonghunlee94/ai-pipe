@@ -37,4 +37,16 @@ for PROTECTED in "${PROTECTED_SUFFIXES[@]}"; do
   fi
 done
 
+# Plugin-toolchain guard (dogfood-arc R3, N24 클래스)
+# 주의 사항:
+# (a) 메인 세션(빈 agent_type)은 위의 [[ -n "$AGENT_TYPE" ]] || exit 0 에서 이미 통과됨 — 신뢰됨.
+# (b) Edit/Write PreToolUse 만 guards — Bash 파일 쓰기는 우회 가능 (advisory 레이어, 다른 훅과 동급).
+# (c) 절대 경로 prefix 매칭만 수행 — 상대 경로는 resolve 하지 않음.
+if [[ -n "${CLAUDE_PLUGIN_ROOT:-}" && -n "$FILE_PATH" ]]; then
+  if [[ "$FILE_PATH" == "$CLAUDE_PLUGIN_ROOT" || "$FILE_PATH" == "$CLAUDE_PLUGIN_ROOT"/* ]]; then
+    echo "BLOCKED: $FILE_PATH is inside the plugin toolchain (\$CLAUDE_PLUGIN_ROOT). Subagents must never modify the toolchain that governs them — propose the change to the main session instead." >&2
+    exit 2
+  fi
+fi
+
 exit 0

@@ -108,6 +108,8 @@ claude mcp add --transport http github https://api.githubcopilot.com/mcp/
 
 MCP 연결이 없어도 project-ops 는 gh CLI 로 동작한다 (기능 동일, 도구 호출 방식만 다름). 단, **`gh auth login` 은 MCP 연결 여부와 무관하게 필수** — Projects V2 field mutation 은 현재 MCP 서버가 다루지 못해 `gh api graphql` 로 수행된다 (MCP toolset 확장 시 재평가).
 
+> fine-grained PAT(개인 리소스 한정)은 Projects V2 권한이 없어 `ai-pipe detect`/보드 연동에는 classic PAT(`project` 스코프)가 별도로 필요하다 — 보드 연동을 실제로 쓸 때 발급. 파이프라인 본체(spec→plan→execute→verify)와 push/PR/Issues 는 fine-grained PAT 만으로 동작한다.
+
 ---
 
 ## 3. 구현 현황
@@ -178,6 +180,8 @@ PreToolUse 차단 훅 6종(verify-boundary, verify-git-safety, validate-commit-m
 ```
 
 > `/verify` 가 다른 verify 스킬과 이름이 겹치는 환경에서는 네임스페이스 형태 `/ai-pipe-core:verify {slug}` 로 호출한다 (dogfood 실측).
+>
+> SHIP 판정 이후의 feat→main merge / PR 생성은 파이프라인 범위 밖 — 사람이 수행한다 (N21 판정: 자동 merge 미지원이 안전 기조에 부합).
 
 - 산출물은 `.artifacts/`(specs/plans/runs) 아래에 떨어진다. 실행 이벤트는 `.artifacts/runs/{slug}-events.jsonl`, 진행/비용은 `${CLAUDE_PLUGIN_ROOT}/bin/adp-watch {slug}`.
 - 로컬 단독(GitHub 미연동) 실행은 `config/pipeline.json` 의 `local_defaults`(story/issue=1)로 impl-agent-input 을 채운다. GitHub Issues/Projects 연동은 project-ops 에이전트가 담당.
@@ -213,6 +217,8 @@ node dist/cli.js init /tmp/test-target   # 부트스트랩 동작 확인
 ```
 
 배포: git tag `v*` push로 GitHub Actions가 `.github/workflows/publish.yml`을 실행 (npm CLI를 GitHub Packages에 publish). Plugin marketplace는 `main` 브랜치 그 자체가 카탈로그이므로 별도 publish 단계가 없다 — `/plugin marketplace update`가 `git pull` 효과를 낸다.
+
+**모델 티어링:** ai-pipe 자체 개발도 파이프라인과 같은 티어를 따른다 — **기획·설계·리뷰·판단은 opus**(메인 세션), **구현 배치는 sonnet 서브에이전트로 디스패치**(`Agent` 도구의 `model: sonnet`). 파이프라인의 impl 에이전트(backend/frontend/infra-eng)가 sonnet 급 작업을 받고 architect/verifier/reviewer 가 opus 인 것과 같은 분업을, 이 repo 의 메타-개발에도 적용한다.
 
 ### 시스템 요구사항
 
@@ -255,6 +261,20 @@ Windows는 현재 미지원 (Bash 훅 의존). WSL 사용 권장.
 3. **이벤트 키 드리프트** — LLM 오케스트레이터가 `type` 대신 `event` 키로 기록(훅이 쓴 줄은 준수) → adp-watch 가 `· ?` 렌더. 생산자(스킬에 정확한 라인 예시 인라인) + 소비자(`.type // .event` 관용) 양면 수정.
 
 추가 실증 데이터: 디렉토리-소스 marketplace 설치에서 `${CLAUDE_PLUGIN_ROOT}` 는 **소스 디렉토리를 직접** 가리킨다(캐시 미사용) — repo 수정이 재설치 없이 즉시 반영. **뒤집으면 실행 중인 세션이 자기 toolchain(훅·스킬)을 mid-run 에 변이시킬 수 있다는 뜻**이다 — dogfood 자식의 훅 수정이 그 사례(이번엔 부모 리뷰로 흡수). 변경은 반드시 리뷰를 거칠 것. `/verify` 는 내장 verify 스킬과 이름이 겹쳐 **`/ai-pipe-core:verify`** 네임스페이스 호출이 필요할 수 있다.
+
+### 설치 모드: dev vs use
+
+| 모드 | 설치 형태 | `CLAUDE_PLUGIN_ROOT` | 특성 |
+|---|---|---|---|
+| **dev** | 디렉토리-소스 (`marketplace add <로컬경로>`) | **라이브 소스** | 수정 즉시 반영. 세션이 자기 toolchain 을 변이시킬 수 있음 — **가드 3겹** 필요 |
+| **use** (권장) | github-소스 (publish 후 `marketplace add <repo>`) | **불변 캐시** | 구조적 격리 — toolchain 변이 불가. 일반 사용 형태 |
+
+**dev 모드 toolchain 변이 가드 3겹:**
+1. `verify-boundary` 가 **서브에이전트의 plugin-tree Edit/Write 를 차단** (`$CLAUDE_PLUGIN_ROOT` 하위 절대경로, project-ops 예외 없음 — toolchain ≠ project config). *Bash 파일 쓰기는 우회 가능 — advisory 레이어, 다른 훅과 동급.*
+2. `session-start` 가 **uncommitted toolchain 변경을 다음 세션 컨텍스트에 경고 주입** (dev 모드에서만 발화, github-소스는 불변이라 silent).
+3. **변경은 리뷰 후 커밋** — 메인 세션(사람이 운전)만 toolchain 을 고칠 수 있고, 서브에이전트 제안은 메인으로 올린다.
+
+> **실증(이 가드를 만든 라운드에서 실발생):** sonnet 구현 서브에이전트가 `verify-git-safety.sh` 를 **Bash/Python 재작성**하다 백틱 이스케이프를 깨 훅을 무력화(→ 모든 Bash 차단) → 메인(opus)이 복구. 가드 #1 은 Edit/Write 만 막으므로 **이 Bash 재작성 경로는 못 막는다** — 가드의 advisory 한계를 그대로 보여준 사례. 교훈: toolchain 수정은 Edit 로(가드 #1 적용), Bash 일괄 재작성 금지 (백로그 N25).
 
 ---
 

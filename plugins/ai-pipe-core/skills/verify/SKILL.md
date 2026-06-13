@@ -37,7 +37,7 @@ allowed-tools:
    {"ts":"...","type":"task_done","task_id":"qa","status":"success"}
    ```
    전체 표는 `observability` skill §1 (spec §12.1).
-6. **보고**: decision, blockers(있으면 출처별), concordance 요약, 추가된 테스트 수를 사용자에게 보고. no-ship 이면 다음 행동(architect 회부 / impl 재작업 task)을 제안.
+6. **보고**: decision, blockers(있으면 출처별), concordance 요약, 추가된 테스트 수를 사용자에게 보고. no-ship 이면 다음 행동(architect 회부 / impl 재작업 task)을 제안. **ship 이후의 merge/PR 은 이 체인의 범위 밖** — 사람(또는 사람의 명시적 지시)이 수행한다 (자동 merge 는 의도적으로 미지원 — N21).
 
 ## 실패 처리
 

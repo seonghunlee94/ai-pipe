@@ -46,4 +46,21 @@ if [[ -n "$LATEST_EVENTS" ]]; then
   echo "- last pipeline event (${LATEST_EVENTS##*/}): ${LAST_EVENT:0:200}"
 fi
 
+# Plugin toolchain uncommitted-changes probe (dev 모드 전용 best-effort — 항상 exit 0)
+# 디렉토리-소스 설치(dev 모드)에서 CLAUDE_PLUGIN_ROOT 는 라이브 소스를 가리키므로
+# uncommitted 변경이 있으면 세션 컨텍스트에 경고를 주입한다.
+# git 실패 또는 clean tree 면 아무것도 출력하지 않는다
+# (github-소스/캐시 설치 = use 모드 — 구조적으로 불변, 무음).
+if [[ -n "${CLAUDE_PLUGIN_ROOT:-}" ]]; then
+  if git -C "$CLAUDE_PLUGIN_ROOT" rev-parse --git-dir >/dev/null 2>&1; then
+    DIRTY=$(git -C "$CLAUDE_PLUGIN_ROOT" status --porcelain -- . 2>/dev/null)
+    if [[ -n "$DIRTY" ]]; then
+      # 첫 3개 파일을 쉼표로 구분해 표시
+      FIRST3=$(printf '%s\n' "$DIRTY" | awk 'NR<=3{gsub(/^[ \t]*/,"",$0); print $NF}' | paste -sd ',' -)
+      echo "- ⚠ plugin toolchain has UNCOMMITTED changes (dev-mode live source): $FIRST3"
+      echo "  → review & commit them (a session can mutate its own toolchain in dev mode — see README §6)"
+    fi
+  fi
+fi
+
 exit 0

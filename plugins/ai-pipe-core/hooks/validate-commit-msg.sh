@@ -22,6 +22,9 @@
 #   git commit -F file
 #   git commit --no-edit
 #   git commit --amend (verify-git-safety.sh handles this)
+#   git -C <dir> commit … / git -c k=v commit … (global options between git and
+#   commit are unparsed — documented scope limit; the SAFETY hook normalizes
+#   them, this LINT hook does not — N23 rule: declare scope, don't add a layer)
 # Exit: 2 = block (Claude Code shows stderr to model), 0 = pass.
 
 set -euo pipefail

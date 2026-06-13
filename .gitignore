@@ -23,3 +23,5 @@ npm-debug.log*
 .npmrc.local
 *.pem
 *.key
+.env
+.env.*

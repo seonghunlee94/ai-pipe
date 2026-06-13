@@ -52,6 +52,12 @@ check "block protected edit" verify-boundary.sh 2 "$(p_boundary ".claude/config/
 check "allow project-ops"    verify-boundary.sh 0 "$(p_boundary ".claude/config/pipeline.json" "project-ops")"
 check "allow main session"   verify-boundary.sh 0 "$(p_boundary ".claude/config/pipeline.json" "")"
 check "allow normal src"     verify-boundary.sh 0 "$(p_boundary "src/index.ts" "backend-eng")"
+# Plugin-toolchain guard (N24/dogfood R3): subagents must never edit the
+# toolchain that governs them — NO project-ops exception (toolchain ≠ project
+# config); main session (empty agent_type) stays trusted.
+check "block subagent toolchain edit" verify-boundary.sh 2 "$(p_boundary "$CLAUDE_PLUGIN_ROOT/hooks/verify-git-safety.sh" "backend-eng")" "plugin toolchain"
+check "block project-ops toolchain"   verify-boundary.sh 2 "$(p_boundary "$CLAUDE_PLUGIN_ROOT/hooks/verify-git-safety.sh" "project-ops")" "plugin toolchain"
+check "allow main toolchain edit"     verify-boundary.sh 0 "$(p_boundary "$CLAUDE_PLUGIN_ROOT/hooks/verify-git-safety.sh" "")"
 
 # --- verify-git-safety (each block pattern + subshell normalization) ---
 check "block force push"   verify-git-safety.sh 2 "$(p_cmd "git push --force origin main")" "force push"
@@ -66,6 +72,22 @@ check "block amend"         verify-git-safety.sh 2 "$(p_cmd "git commit --amend 
 check "allow plain push"    verify-git-safety.sh 0 "$(p_cmd "git push origin main")"
 check "allow git status"    verify-git-safety.sh 0 "$(p_cmd "git status")"
 check "allow checkout file" verify-git-safety.sh 0 "$(p_cmd "git checkout src/x.ts")"
+# Git GLOBAL options before the subcommand must NOT bypass the block patterns
+# (N24/dogfood R3 — normalized in one pass, not a new parser layer).
+check "block -C force push"  verify-git-safety.sh 2 "$(p_cmd "git -C /tmp push --force origin main")" "force push"
+check "block -c reset hard"  verify-git-safety.sh 2 "$(p_cmd "git -c user.name=x reset --hard HEAD~1")" "reset --hard"
+check "allow -C status"      verify-git-safety.sh 0 "$(p_cmd "git -C /tmp status")"
+# No-arg globals also shift the subcommand — must not bypass (R1 auditor B2).
+check "block --no-pager push" verify-git-safety.sh 2 "$(p_cmd "git --no-pager push --force origin main")" "force push"
+check "block -P reset hard"    verify-git-safety.sh 2 "$(p_cmd "git -P reset --hard HEAD")" "reset --hard"
+check "block mixed globals"    verify-git-safety.sh 2 "$(p_cmd "git --no-pager -C /tmp push --force")" "force push"
+# Generic normalization closes ANY global, not an enumerated list (R2 hunter:
+# --namespace / -p / --exec-path slipped the no-arg-list version).
+check "block --namespace push" verify-git-safety.sh 2 "$(p_cmd "git --namespace=x push --force origin main")" "force push"
+check "block -p reset hard"    verify-git-safety.sh 2 "$(p_cmd "git -p reset --hard HEAD")" "reset --hard"
+check "block --exec-path push" verify-git-safety.sh 2 "$(p_cmd "git --exec-path=/x push --force")" "force push"
+# A global option's ARG must not be mistaken for the subcommand.
+check "arg not subcommand"     verify-git-safety.sh 2 "$(p_cmd "git -c push=1 reset --hard HEAD")" "reset --hard"
 
 # --- validate-commit-msg (forms + length + period) ---
 HEREDOC_OK=$'git commit -m "$(cat <<\'EOF\'\nfeat: heredoc subject\nEOF\n)"'
@@ -80,6 +102,10 @@ check "block --message no type" validate-commit-msg.sh 2 "$(p_cmd 'git commit --
 check "block over-long subject" validate-commit-msg.sh 2 "$(p_cmd "git commit -m \"feat: $LONG_SUBJECT\"")" "length"
 check "block trailing period"   validate-commit-msg.sh 2 "$(p_cmd 'git commit -m "feat: ends here."')" "period"
 check "ignore non-commit"       validate-commit-msg.sh 0 "$(p_cmd "ls -la")"
+# Documented scope limit (header "Skipped"): global options before commit are
+# unparsed by this LINT hook (the SAFETY hook normalizes them) — pin the
+# behavior so a future change is loud (N23/N24).
+check "global-opt commit unparsed" validate-commit-msg.sh 0 "$(p_cmd 'git -C /tmp commit -m "added stuff"')"
 # Dogfood regressions: a FILE-creation heredoc in a compound command must not
 # be mistaken for the commit message (Case A is anchored to -m "$(cat <<TAG).
 FILE_HEREDOC_GOOD=$'cat > pkg.json <<\'EOF\'\n{\n  "a": 1\n}\nEOF\ngit commit -m "chore: scaffold"'

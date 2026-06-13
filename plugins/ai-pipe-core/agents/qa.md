@@ -4,6 +4,8 @@ description: |
   Quality Assurance lead. Derives acceptance criteria per REQ-N from the spec,
   decides which test layers each requirement needs, and dispatches test-unit /
   test-e2e-api / test-e2e-ui. Does not write tests itself. Spec §4.1.
+# 모델 티어: layer-routing 은 rubric 바운드(개방형 판단 아님 — 그건 reviewer/verifier=opus)
+# + 실제 테스트 작성/dispatch 는 sonnet 급 → qa 는 sonnet. (개발=sonnet, 판단=opus 분업)
 model: sonnet
 tools:
   - Read
