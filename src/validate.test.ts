@@ -90,4 +90,40 @@ describe("validateTree", () => {
     expect(warns.some((m) => m.startsWith("pub.json"))).toBe(true);
     expect(warns.some((m) => m.startsWith("ok.json"))).toBe(false);
   });
+
+  it("warns on the org placeholder in a .ts file (slash form) and .npmrc (colon scope form) (N27)", () => {
+    // Built from parts (sweep-proof) — see the json fixture above. The .npmrc
+    // uses the REAL scope-route form `@your-org:registry` (colon, no slash) —
+    // exactly the leak the slash-only check once missed; the [/:] matcher
+    // catches it.
+    write("src/init.ts", `const url = "github:${"your-" + "org"}/ai-pipe";\n`);
+    write(".npmrc", `@${"your-" + "org"}:registry=https://npm.pkg.github.com\n`);
+    const warns = messages(validateTree(root), "warn");
+    expect(warns.some((m) => m.startsWith("src/init.ts"))).toBe(true);
+    expect(warns.some((m) => m.startsWith(".npmrc"))).toBe(true);
+  });
+
+  it("does NOT flag a real org that merely starts with the placeholder stem (N27)", () => {
+    // `your-organization` has no `/` or `:` right after `your-org`, so the
+    // delimiter-anchored matcher must not false-positive — in a .ts this time.
+    write("src/real.ts", `const scope = "@${"your-" + "organization"}/pkg";\n`);
+    const warns = messages(validateTree(root), "warn");
+    expect(warns.some((m) => m.startsWith("src/real.ts"))).toBe(false);
+  });
+
+  it("does NOT self-flag the detector's own source (basename exempt, N27)", () => {
+    // A file named validate.ts may legitimately contain the placeholder string
+    // (it IS the detector). Same for its test. Must not warn.
+    write("src/validate.ts", `// matches ${"your-" + "org"}/ in this comment\n`);
+    write("src/validate.test.ts", `const f = "${"your-" + "org"}/x";\n`);
+    const warns = messages(validateTree(root), "warn");
+    expect(warns.some((m) => m.startsWith("src/validate.ts"))).toBe(false);
+    expect(warns.some((m) => m.startsWith("src/validate.test.ts"))).toBe(false);
+  });
+
+  it("exempts template/ .ts files from the placeholder check (N27)", () => {
+    write("template/x.ts", `const u = "${"your-" + "org"}/y";\n`);
+    const warns = messages(validateTree(root), "warn");
+    expect(warns.some((m) => m.includes("x.ts"))).toBe(false);
+  });
 });

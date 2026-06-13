@@ -7,7 +7,8 @@
 //   - every agent definition (agents/<name>.md) and SKILL.md has a delimited
 //     frontmatter block with both `name:` and `description:`
 //   - filled project-settings.md has no remaining {{PLACEHOLDER}} markers
-//   - publishable *.json has no leftover `your-org/` placeholder (warning)
+//   - publishable *.json / *.ts / .npmrc has no leftover `your-org/` placeholder
+//     (warning; the detector's own source + tests are exempt by basename)
 //   - an unreadable directory is surfaced as a warning, never silently skipped
 //
 // Exposed as a library function (`validateTree`) so init.ts can run a post-write
@@ -41,8 +42,26 @@ export interface ValidateOptions {
 // PURPOSE: the sweep rewrites every literal in *.ts, and if it could rewrite
 // this DETECTOR too, the user's real org would become a permanent false
 // positive and checklist step 2 ("strict validate shows 0 warnings") would be
-// unpassable. Do not join into a single literal.
+// unpassable. Do not join into a single literal. The string form is used in the
+// warning message; the RE is the actual matcher.
 const ORG_PLACEHOLDER = "your-" + "org/";
+
+// Match `your-org` followed by `/` OR `:` — the two real placeholder forms:
+//   github / npm-scope path  `@your-org/ai-pipe`   → `your-org/`
+//   npm-scope registry route `@your-org:registry`  → `your-org:`  (.npmrc — the
+//                                                     form the slash-only check
+//                                                     once missed, N27)
+// The trailing delimiter is REQUIRED so a real org like `your-organization` is
+// not a false positive. Built from parts for the same sweep-proofing as above.
+const ORG_PLACEHOLDER_RE = new RegExp("your-" + "org[/:]");
+
+// Basenames whose SOURCE legitimately contains the placeholder string (this
+// detector's comments + its test fixtures). Exempt so extending the scan to
+// *.ts doesn't self-flag. Basename-keyed so it holds regardless of the
+// validated root (e.g. `validate .` vs `validate src`). Trade-off: a user's
+// OWN file sharing this basename is also exempt — acceptable (benign missed
+// warning, only if it ALSO contains the literal placeholder). (N27)
+const PLACEHOLDER_EXEMPT = new Set(["validate.ts", "validate.test.ts"]);
 
 // Build/VCS/runtime-artifact directories that never contain source to validate.
 const SKIP_DIRS = new Set([
@@ -154,6 +173,22 @@ function checkFrontmatter(raw: string, rel: string): Problem[] {
   return out;
 }
 
+// Warn when a non-template, non-exempt file still carries the `your-org/`
+// placeholder (npm scope `@your-org/`, github `your-org/`, so a real org like
+// `your-organization` is not a false positive). Extended beyond *.json to *.ts
+// and .npmrc (N27) — a publish must not ship a broken scope route (.npmrc) or
+// install command (init.ts) the JSON-only scan once missed.
+function checkOrgPlaceholder(raw: string, rel: string, underTemplate: boolean, problems: Problem[]): void {
+  if (underTemplate || PLACEHOLDER_EXEMPT.has(basename(rel))) return;
+  if (ORG_PLACEHOLDER_RE.test(raw)) {
+    problems.push({
+      level: "warn",
+      file: rel,
+      message: `contains an org placeholder like '${ORG_PLACEHOLDER}' (also '@…:registry') — run the README §0 sed sweep before publishing`,
+    });
+  }
+}
+
 export function validateTree(root: string, opts: ValidateOptions = {}): Problem[] {
   const checkPlaceholders = opts.placeholders ?? true;
   const problems: Problem[] = [];
@@ -173,16 +208,15 @@ export function validateTree(root: string, opts: ValidateOptions = {}): Problem[
       } catch (e) {
         problems.push({ level: "error", file: rel, message: `invalid JSON: ${errMsg(e)}` });
       }
-      // Templates legitimately carry the placeholder; only flag real config.
-      // Match `your-org/` (npm scope `@your-org/`, github `your-org/`) so a real
-      // org like `your-organization` is not a false positive.
-      if (!underTemplate && raw.includes(ORG_PLACEHOLDER)) {
-        problems.push({
-          level: "warn",
-          file: rel,
-          message: `contains '${ORG_PLACEHOLDER}' placeholder — run the README §0 sed sweep before publishing`,
-        });
-      }
+      checkOrgPlaceholder(raw, rel, underTemplate, problems);
+    } else if (file.endsWith(".ts")) {
+      const raw = tryRead(file, rel, problems);
+      if (raw === null) continue;
+      checkOrgPlaceholder(raw, rel, underTemplate, problems);
+    } else if (basename(file) === ".npmrc") {
+      const raw = tryRead(file, rel, problems);
+      if (raw === null) continue;
+      checkOrgPlaceholder(raw, rel, underTemplate, problems);
     } else if (file.endsWith(".sh")) {
       const inHookish = segs.includes("hooks") || segs.includes("bin") || segs.includes("scripts");
       if (!inHookish) continue;
