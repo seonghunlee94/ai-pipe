@@ -1,7 +1,7 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "$id": "https://github.com/your-org/ai-pipe/schemas/eval-case.schema.json",
-  "$comment": "$id contains the `your-org` placeholder; replace before publishing via the sed recipe in README §0.",
+  "$id": "https://github.com/seonghunlee94/ai-pipe/schemas/eval-case.schema.json",
+  "$comment": "$id is a stable identifier, not externally dereferenced; it points at the canonical repo.",
   "title": "Eval Case",
   "description": "A single prompt-regression eval case: fixed input + expected output metrics. Scored by `ai-pipe eval <dir> --outputs <dir>` against a recorded agent output at <outputs>/<name>.json. Each metric reads a fixed output field (req_ids_min→req_ids.length, spec_path_exists→spec_path, downstream_notes_not_null→downstream_notes, status_in→status).",
   "type": "object",

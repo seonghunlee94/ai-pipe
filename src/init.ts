@@ -122,7 +122,7 @@ function printNextSteps(target: string, version: string): void {
       ``,
       `The agents, hooks, skills (incl. slash commands), and scripts come from the ai-pipe-core plugin.`,
       `Inside Claude Code, run:`,
-      `  /plugin marketplace add github:your-org/ai-pipe`,
+      `  /plugin marketplace add github:seonghunlee94/ai-pipe`,
       `  /plugin install ai-pipe-core@ai-pipe`,
       ``,
       `Then edit ${target}/.claude/rules/project-settings.md and run \`gh auth login\`.`,

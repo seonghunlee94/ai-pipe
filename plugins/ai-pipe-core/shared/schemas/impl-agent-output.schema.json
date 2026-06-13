@@ -1,7 +1,7 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "$id": "https://github.com/your-org/ai-pipe/schemas/impl-agent-output.schema.json",
-  "$comment": "$id contains the `your-org` placeholder; replace before publishing via the sed recipe in README §0. The $id is not externally dereferenced until then.",
+  "$id": "https://github.com/seonghunlee94/ai-pipe/schemas/impl-agent-output.schema.json",
+  "$comment": "$id is a stable identifier, not externally dereferenced; it points at the canonical repo.",
   "title": "Implementation Agent Output",
   "description": "Spec §11.1 — output contract for backend-eng, frontend-eng, infra-eng. additionalProperties intentionally permitted; downstream tools tolerate extras.",
   "type": "object",

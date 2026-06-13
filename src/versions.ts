@@ -1,8 +1,8 @@
 // spec §9.1 — list versions available on the registry.
 // `ai-pipe versions` queries `npm view <pkg> versions --json`. When the package
-// is unpublished / offline (the default until the your-org placeholder is
-// replaced and a release is cut), it degrades to printing the local CLI version
-// with a clear note rather than failing.
+// is unpublished / offline (e.g. no release cut yet, or no registry auth), it
+// degrades to printing the local CLI version with a clear note rather than
+// failing.
 
 import { execFileSync } from "node:child_process";
 
@@ -25,8 +25,8 @@ export async function runVersions(args: string[]): Promise<void> {
   } catch (e) {
     process.stdout.write(
       `registry: unavailable for ${pkg.name} (${errMsg(e)}).\n` +
-        `  This is expected until the package is published (replace the your-org\n` +
-        `  placeholder per README §0 and cut a release).\n`,
+        `  Expected if the package isn't published yet or the registry needs auth\n` +
+        `  (see README §0 publish checklist).\n`,
     );
     return;
   }

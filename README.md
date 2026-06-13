@@ -2,13 +2,15 @@
 
 Claude Code 기반 멀티 에이전트 자동화 파이프라인. **Claude Code Plugin Marketplace**로 배포하여 다양한 프로젝트·머신에서 공유 가능하고, 프로젝트별 설정과 GitHub Issues/Projects V2 연동을 지원한다.
 
-> **현재 상태: DEV1–7 + §6 실증 + 실사용(dogfood) 라운드 완료 — 파이프라인 end-to-end SHIP 실증**. 12개 에이전트, spec→plan→execute→verify 체인이 설치된 플러그인으로 실제 기능 1개를 완주(verifier 판정 SHIP, §6 참조). PreToolUse 6종 + SessionStart/SessionEnd 훅, CLI 12개 명령, Concordance Gate·오류 분류기, 5-레이어 테스트 스위트 + CI. 남은 것: 라이선스 선택 → 버전·태그 (§0 체크리스트). 자세한 설계는 [`multi-agent-pipeline-best-practices.md`](./multi-agent-pipeline-best-practices.md).
+> **현재 상태: DEV1–7 + §6 실증 + 실사용(dogfood) 라운드 완료 — 파이프라인 end-to-end SHIP 실증**. 12개 에이전트, spec→plan→execute→verify 체인이 설치된 플러그인으로 실제 기능 1개를 완주(verifier 판정 SHIP, §6 참조). PreToolUse 6종 + SessionStart/SessionEnd 훅, CLI 12개 명령, Concordance Gate·오류 분류기, 5-레이어 테스트 스위트 + CI. **퍼블리시 준비 완료** (MIT, `@seonghunlee94/ai-pipe` v0.1.0) — 실제 배포는 `v0.1.0` 태그 push 만 남음(§0 체크리스트). 자세한 설계는 [`multi-agent-pipeline-best-practices.md`](./multi-agent-pipeline-best-practices.md).
 
 ---
 
-## 0. 사용 전 교체해야 할 placeholder
+## 0. org placeholder (포크용)
 
-루트 곳곳에 `@your-org` / `your-org`(GitHub org/user)이 들어가 있다.
+정규 저장소는 **`seonghunlee94`** org 로 설정·배포된다(`@seonghunlee94/ai-pipe`). 아래는 **이 프로젝트를 포크해 본인 org 로 재배포하려는 경우에만** 필요하다 — 그대로 설치(`/plugin marketplace add github:seonghunlee94/ai-pipe`)만 할 거면 건너뛴다.
+
+포크 시 `@your-org` / `your-org` 자리에 본인 org/user 를 채운다.
 
 macOS (BSD sed):
 
@@ -30,10 +32,10 @@ grep -rl 'your-org' . --include='*.json' --include='*.md' --include='*.ts' --inc
 
 ### 퍼블리시 체크리스트 (공개/배포 시점에 순서대로)
 
-1. **라이선스 결정** — 현재 `UNLICENSED`(private, 의도된 상태). 공개 전 라이선스(MIT/Apache-2.0 등)를 **사용자가 직접 선택**해 `LICENSE` 파일 추가 + `package.json` `license` 갱신 (§7).
-2. **placeholder 치환** — 위 sed 스윕 실행 → `npm run build`(dist 재생성) → `node dist/cli.js validate . --strict` 로 잔여 `your-org/` 경고 0 확인.
+1. ~~**라이선스 결정**~~ — **완료**: MIT (`LICENSE` 추가, `package.json`/`plugin.json` `license: MIT`, §7).
+2. ~~**placeholder 치환**~~ — **완료(정규 repo)**: `seonghunlee94` 로 치환, `validate` 잔여 `your-org/` 경고 0. (포크 시 위 §0 sed 스윕을 본인 org 로 실행.)
 3. ~~**§6 실증 라운드**~~ — **완료**: 설치 실증(2026-06-11 — 8건 판정 + 신규 owner 결함 수정) + 실사용 dogfood(2026-06-12 — 이월 2건 판정, 결함 3건 수정, 파이프라인 E2E SHIP). §6 결과 참조.
-4. **버전·태그** — `package.json`/`plugin.json`/`marketplace.json` 버전 정렬 후 `git tag v<X.Y.Z>` push → publish workflow 가 `npm test` 게이트 통과 시 GitHub Packages 로 배포.
+4. **버전·태그** — 버전은 `0.1.0` 으로 정렬 완료(package.json/plugin.json/marketplace.json). 실제 배포는 `git tag v0.1.0 && git push --tags` → publish workflow 가 `npm test` 게이트 통과 시 GitHub Packages 로 배포. **(태그 push 는 사용자가 원할 때 — 준비만 완료된 상태.)**
 
 ---
 
@@ -44,7 +46,7 @@ ai-pipe는 **두 채널**로 사용자 프로젝트에 도착한다:
 ```
 ┌────────────────────────────────────────────────────────┐
 │   Channel A: Claude Code Plugin Marketplace (주력)      │
-│   /plugin marketplace add github:your-org/ai-pipe      │
+│   /plugin marketplace add github:seonghunlee94/ai-pipe │
 │   /plugin install ai-pipe-core@ai-pipe                 │
 │   → 에이전트/훅/명령/스크립트를 plugin cache로 자동 배포  │
 └────────────────────────────────────────────────────────┘
@@ -72,7 +74,7 @@ ai-pipe는 **두 채널**로 사용자 프로젝트에 도착한다:
 ### 2-1. Plugin 설치 (필수 — Claude Code 내부에서)
 
 ```
-/plugin marketplace add github:your-org/ai-pipe
+/plugin marketplace add github:seonghunlee94/ai-pipe
 /plugin install ai-pipe-core@ai-pipe
 ```
 
@@ -82,7 +84,7 @@ ai-pipe는 **두 채널**로 사용자 프로젝트에 도착한다:
 
 ```bash
 # npm CLI를 글로벌 설치
-npm install -g @your-org/ai-pipe
+npm install -g @seonghunlee94/ai-pipe
 
 # 프로젝트 디렉토리에서
 cd my-project
@@ -209,7 +211,7 @@ PreToolUse 차단 훅 6종(verify-boundary, verify-git-safety, validate-commit-m
 ## 5. 개발
 
 ```bash
-git clone https://github.com/your-org/ai-pipe.git
+git clone https://github.com/seonghunlee94/ai-pipe.git
 cd ai-pipe
 npm install         # devDep 4개만 — typescript/@types/node/vitest/biome (런타임 의존성 0)
 npm run build       # tsc → dist/
@@ -280,4 +282,4 @@ Windows는 현재 미지원 (Bash 훅 의존). WSL 사용 권장.
 
 ## 7. 라이선스
 
-UNLICENSED (private). 공개 배포 시 `package.json`의 `license` 필드와 `LICENSE` 파일 추가 필요.
+[MIT](./LICENSE) © 2026 seonghunlee94. 저작권 표기만 유지하면 자유롭게 사용·수정·재배포 가능(무보증).

@@ -1,13 +1,13 @@
 {
   "$comment": "Claude Code plugin manifest — empirically validated against the official schema (2.1.170). agents/, skills/, hooks/ are auto-discovered by convention (no `components` field exists); hook wiring lives in hooks/hooks.json; `settings`/`requirements` are not real manifest fields (tool prerequisites — jq, gh, bash, git — are checked by `ai-pipe preflight` and documented in README).",
   "name": "ai-pipe-core",
-  "version": "0.0.4",
+  "version": "0.1.0",
   "description": "Multi-agent automation pipeline: PM/Architect/Backend/Frontend/Infra/QA/Test/Reviewer/Verifier/Project-Ops agents, with PreToolUse safety hooks and GitHub Issues/Projects V2 integration via the GitHub MCP server (gh CLI fallback). Requires jq, gh, bash, git on PATH (run `ai-pipe preflight`).",
   "author": {
     "name": "seonghunlee94"
   },
-  "homepage": "https://github.com/your-org/ai-pipe",
-  "license": "UNLICENSED",
+  "homepage": "https://github.com/seonghunlee94/ai-pipe",
+  "license": "MIT",
   "keywords": [
     "multi-agent",
     "pipeline",

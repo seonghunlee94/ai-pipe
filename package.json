@@ -1,6 +1,6 @@
 {
-  "name": "@your-org/ai-pipe",
-  "version": "0.0.1",
+  "name": "@seonghunlee94/ai-pipe",
+  "version": "0.1.0",
   "description": "Multi-agent automation pipeline CLI for Claude Code. Scaffolding stage — see README for status.",
   "type": "module",
   "bin": {
@@ -9,7 +9,9 @@
   "files": [
     "dist",
     "template",
-    "README.md"
+    "README.md",
+    "CHANGELOG.md",
+    "LICENSE"
   ],
   "scripts": {
     "build": "tsc",
@@ -32,18 +34,23 @@
   },
   "publishConfig": {
     "registry": "https://npm.pkg.github.com",
-    "access": "restricted"
+    "access": "public"
   },
+  "author": "seonghunlee94",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/your-org/ai-pipe.git"
+    "url": "git+https://github.com/seonghunlee94/ai-pipe.git"
   },
+  "bugs": {
+    "url": "https://github.com/seonghunlee94/ai-pipe/issues"
+  },
+  "homepage": "https://github.com/seonghunlee94/ai-pipe#readme",
   "keywords": [
     "claude-code",
     "multi-agent",
     "pipeline",
     "orchestration"
   ],
-  "license": "UNLICENSED",
+  "license": "MIT",
   "private": false
 }
