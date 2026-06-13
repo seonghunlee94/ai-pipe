@@ -6,7 +6,7 @@ import { existsSync, readdirSync, statSync } from "node:fs";
 import { join, sep } from "node:path";
 
 import { AiPipeError } from "./errors.js";
-import { LOCAL_DIRS, LOCAL_FILES } from "./local-files.js";
+import { GENERATED_FILES, LOCAL_DIRS, LOCAL_FILES } from "./local-files.js";
 import { fileHash, templateDir } from "./utils.js";
 
 // Resolve and require an installed .claude/ tree under target; shared by
@@ -33,6 +33,13 @@ export function isLocallyOwnedPath(rel: string): boolean {
     if (rel === d || rel.startsWith(`${d}/`)) return true;
   }
   return false;
+}
+
+// `.dev-pipe-version` is WRITTEN by init/update from pkg.version, not synced
+// from the template — so it must never be drift-compared (else the static
+// template seed needs a hand-bump every release, N26) nor flagged orphaned.
+function isGeneratedPath(rel: string): boolean {
+  return GENERATED_FILES.includes(rel);
 }
 
 // List files under root as paths relative to root, with forward slashes (so
@@ -71,6 +78,7 @@ export function scanTemplate(installedClaudeDir: string): FileChange[] {
   const changes: FileChange[] = [];
 
   for (const rel of tmplFiles) {
+    if (isGeneratedPath(rel)) continue;
     if (isLocallyOwnedPath(rel)) {
       changes.push({ path: rel, status: "local" });
     } else if (!instFiles.has(rel)) {
@@ -83,7 +91,7 @@ export function scanTemplate(installedClaudeDir: string): FileChange[] {
   }
   // Files present in the install but no longer shipped by the template.
   for (const rel of instFiles) {
-    if (!tmplFiles.has(rel) && !isLocallyOwnedPath(rel)) {
+    if (!tmplFiles.has(rel) && !isLocallyOwnedPath(rel) && !isGeneratedPath(rel)) {
       changes.push({ path: rel, status: "orphaned" });
     }
   }

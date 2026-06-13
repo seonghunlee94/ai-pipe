@@ -16,6 +16,12 @@ export const LOCAL_DIRS: readonly string[] = [
   "config/conventions",
 ];
 
+// Generated stamps: WRITTEN by init/update from runtime state (pkg.version),
+// not synced from the template. Unlike LOCAL_FILES these ARE overwritten on
+// every init/update — they're simply excluded from drift comparison
+// (scanTemplate) and shipped as NO static template file. (N26)
+export const GENERATED_FILES: readonly string[] = [".dev-pipe-version"];
+
 export const GITIGNORE_MARKER = "# Added by ai-pipe init";
 
 export const GITIGNORE_LINES: readonly string[] = [

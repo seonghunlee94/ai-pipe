@@ -57,6 +57,15 @@ describe("scanTemplate", () => {
     const settings = scanTemplate(claude).find((c) => c.path === "rules/project-settings.md");
     expect(settings?.status).toBe("local");
   });
+
+  it("never drift-flags the generated .dev-pipe-version, even when it differs", async () => {
+    await runInit([dir]);
+    const claude = join(dir, ".claude");
+    // Simulate version skew between the installed stamp and the running CLI.
+    writeFileSync(join(claude, ".dev-pipe-version"), "9.9.9\n");
+    const hit = scanTemplate(claude).find((c) => c.path === ".dev-pipe-version");
+    expect(hit).toBeUndefined(); // not changed, not orphaned, not same — absent
+  });
 });
 
 describe("runPipeline", () => {
