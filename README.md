@@ -2,7 +2,7 @@
 
 Claude Code 기반 멀티 에이전트 자동화 파이프라인. **Claude Code Plugin Marketplace**로 배포하여 다양한 프로젝트·머신에서 공유 가능하고, 프로젝트별 설정과 GitHub Issues/Projects V2 연동을 지원한다.
 
-> **현재 상태: DEV1–7 + §6 실증 + 실사용(dogfood) 라운드 완료 — 파이프라인 end-to-end SHIP 실증**. 12개 에이전트, spec→plan→execute→verify 체인이 설치된 플러그인으로 실제 기능 1개를 완주(verifier 판정 SHIP, §6 참조). PreToolUse 6종 + SessionStart/SessionEnd 훅, CLI 12개 명령, Concordance Gate·오류 분류기, 5-레이어 테스트 스위트 + CI. **퍼블리시 준비 완료** (MIT, `@seonghunlee94/ai-pipe` v0.1.0) — 실제 배포는 `v0.1.0` 태그 push 만 남음(§0 체크리스트). 자세한 설계는 [`multi-agent-pipeline-best-practices.md`](./multi-agent-pipeline-best-practices.md).
+> **현재 상태: DEV1–7 + §6 실증 + 실사용(dogfood) 라운드 완료 — 파이프라인 end-to-end SHIP 실증**. 12개 에이전트, spec→plan→execute→verify 체인이 설치된 플러그인으로 실제 기능 1개를 완주(verifier 판정 SHIP, §6 참조). PreToolUse 6종 + SessionStart/SessionEnd 훅, CLI 12개 명령, Concordance Gate·오류 분류기, 5-레이어 테스트 스위트 + CI. **v0.1.0 배포 완료** (MIT, `@seonghunlee94/ai-pipe` — GitHub Packages, [release](https://github.com/seonghunlee94/ai-pipe/releases/tag/v0.1.0)). 자세한 설계는 [`multi-agent-pipeline-best-practices.md`](./multi-agent-pipeline-best-practices.md).
 
 ---
 
@@ -35,7 +35,7 @@ grep -rl 'your-org' . --include='*.json' --include='*.md' --include='*.ts' --inc
 1. ~~**라이선스 결정**~~ — **완료**: MIT (`LICENSE` 추가, `package.json`/`plugin.json` `license: MIT`, §7).
 2. ~~**placeholder 치환**~~ — **완료(정규 repo)**: `seonghunlee94` 로 치환, `validate` 잔여 `your-org/` 경고 0. (포크 시 위 §0 sed 스윕을 본인 org 로 실행.)
 3. ~~**§6 실증 라운드**~~ — **완료**: 설치 실증(2026-06-11 — 8건 판정 + 신규 owner 결함 수정) + 실사용 dogfood(2026-06-12 — 이월 2건 판정, 결함 3건 수정, 파이프라인 E2E SHIP). §6 결과 참조.
-4. **버전·태그** — 버전은 `0.1.0` 으로 정렬 완료(package.json/plugin.json/marketplace.json). 실제 배포는 `git tag v0.1.0 && git push --tags` → publish workflow 가 `npm test` 게이트 통과 시 GitHub Packages 로 배포. **(태그 push 는 사용자가 원할 때 — 준비만 완료된 상태.)**
+4. ~~**버전·태그**~~ — **완료(2026-06-14)**: `v0.1.0` 태그 push → publish workflow 가 build·test 게이트 통과 후 GitHub Packages 로 `@seonghunlee94/ai-pipe@0.1.0` 배포. [GitHub Release](https://github.com/seonghunlee94/ai-pipe/releases/tag/v0.1.0) 생성. 차기 릴리스는 버전 bump → `git tag v<X.Y.Z> && git push --tags`.
 
 ---
 
