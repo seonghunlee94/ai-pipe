@@ -20,7 +20,9 @@ jobs:
           registry-url: 'https://npm.pkg.github.com'
 
       - run: npm ci
-      - run: npm run build
+      # No explicit build: `npm test` needs no dist (typecheck --noEmit, vitest
+      # runs src, bash harnesses run files directly), and `npm publish` builds
+      # via the `prepublishOnly` script right before packing (N28).
       - run: npm test
 
       - run: npm publish

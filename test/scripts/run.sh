@@ -104,6 +104,9 @@ printf '%s\n' \
   > "$TMP/.artifacts/runs/drift-events.jsonl"
 check "adp-watch: drifted key"   0 "▶ T-1 (backend-eng)" -- bash -c "cd '$TMP' && bash '$ADP' drift --replay"
 check "adp-watch: canonical key" 0 "✔ T-1 success"        -- bash -c "cd '$TMP' && bash '$ADP' drift --replay"
+# N22: the silent `.type // .event` fallback now warns once on stderr (harness
+# captures 2>&1) so a future drift relapse is visible, not invisible.
+check "adp-watch: drift warns once" 0 "legacy 'event' key" -- bash -c "cd '$TMP' && bash '$ADP' drift --replay"
 
 # ---------- §8 taxonomy sync (N16) ----------
 # The classifier hardcodes the common-agent-rules §8 categories and its header

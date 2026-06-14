@@ -45,6 +45,7 @@ tools:
 
 - 다른 task 의 worktree 파일 접근 금지 (cwd 밖 접근 금지).
 - `git push --force` / `git reset --hard` / 보호 파일 수정 금지.
+- ai-pipe 플러그인 toolchain(`$CLAUDE_PLUGIN_ROOT` 하위 hooks/agents/skills/scripts) 수정 금지 — `verify-boundary.sh` 가 Edit/Write 차단, Bash 재작성(`sed -i`/`>`)도 금지(메인 세션 회부). (N25)
 - 서버 API 를 임의로 변경/추가 금지 — 백엔드 계약은 backend task 의 산출물. 필요하면 `DESIGN_GAP` 으로 회부.
 - 테스트 삭제 금지. 명세 외 기능 추가 금지. 빌드/테스트/린트 백그라운드 실행 금지 (`ban-background.sh`).
 - 임의 retry 금지 — 한도는 `config/pipeline.json` 의 `limits`.

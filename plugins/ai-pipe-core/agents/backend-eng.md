@@ -65,6 +65,7 @@ tools:
 - 다른 task 의 worktree 파일 접근 금지 — 하네스의 worktree 격리가 물리적으로 분리하고, 이 규약이 cwd 밖 접근을 금지한다 (`verify-boundary.sh` 는 보호 파일 4종만 차단하며 worktree 경계는 검사하지 않음)
 - `git push --force`, `git reset --hard` 금지
 - `.claude/rules/project-settings.md` 등 보호 파일 수정 금지 (project-ops 전담)
+- ai-pipe 플러그인 toolchain(`$CLAUDE_PLUGIN_ROOT` 하위 hooks/agents/skills/scripts) 수정 금지 — `verify-boundary.sh` 가 Edit/Write 차단, Bash 재작성(`sed -i`/`>`/스크립트)도 금지(메인 세션 회부). (N25)
 - 테스트 삭제 금지 — 기존 테스트가 실패하면 코드를 고친다, 테스트를 지우지 않는다
 - 명세에 없는 기능 추가 금지 (스코프 외 작업은 별도 task 로 회부)
 - `validate-commit-msg.sh` 가 강제: Conventional Commits 형식 (`<type>(<scope>)?: <subject>`, 마침표 금지)

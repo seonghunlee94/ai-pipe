@@ -44,6 +44,7 @@ tools:
 
 - **실제 배포/`apply`/`destroy` 자동 실행 금지** — plan/validate 까지만, 적용은 사람 승인.
 - 시크릿 literal 작성 금지 (`secrets-scan.sh`). `git push --force` / `git reset --hard` / 보호 파일 수정 금지.
+- ai-pipe 플러그인 toolchain(`$CLAUDE_PLUGIN_ROOT` 하위 hooks/agents/skills/scripts) 수정 금지 — `verify-boundary.sh` 가 Edit/Write 차단, Bash 재작성(`sed -i`/`>`)도 금지(메인 세션 회부). (N25)
 - 다른 task worktree 접근 금지. 명세 외 작업 금지. 백그라운드 빌드/검증 금지.
 - 임의 retry 금지 — 한도는 `config/pipeline.json` 의 `limits`.
 

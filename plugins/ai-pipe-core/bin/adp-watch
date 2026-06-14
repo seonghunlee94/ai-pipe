@@ -57,9 +57,17 @@ print_event() {
                    .task_id // "?", .agent // "?", .status // "?",
                    (.attempt // "?"|tostring), .category // "?",
                    .to // "human", .branch // "?",
-                   (.dirty_files // 0|tostring)] | @tsv' <<<"$line" 2>/dev/null) || return 0
-  local ts type phase task_id agent status attempt category to branch dirty
-  IFS=$'\t' read -r ts type phase task_id agent status attempt category to branch dirty <<<"$fields"
+                   (.dirty_files // 0|tostring),
+                   (if (.type == null and .event != null) then "1" else "0" end)] | @tsv' <<<"$line" 2>/dev/null) || return 0
+  local ts type phase task_id agent status attempt category to branch dirty drift
+  IFS=$'\t' read -r ts type phase task_id agent status attempt category to branch dirty drift <<<"$fields"
+  # N22: the `.type // .event` fallback above silently rescues key-drift; warn
+  # ONCE on stderr so a future drift relapse is visible, not invisible. NOT
+  # `local` — must persist across calls in the same shell (replay loop).
+  if [[ "$drift" == "1" && -z "${DRIFT_WARNED:-}" ]]; then
+    DRIFT_WARNED=1
+    printf '%s\n' "⚠ adp-watch: events use the legacy 'event' key (canonical is 'type', observability skill §1) — rendering via fallback." >&2
+  fi
   case "$type" in
     phase_start)  printf '[%s] ▶ Phase %s started\n'   "$ts" "$phase" ;;
     phase_done)   printf '[%s] ✔ Phase %s done\n'       "$ts" "$phase" ;;

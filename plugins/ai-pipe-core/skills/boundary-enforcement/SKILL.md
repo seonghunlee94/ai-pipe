@@ -44,6 +44,8 @@ user-invocable: false
 
 설정 변경이 필요하면 명세 요청을 만들어 `project-ops`로 위임.
 
+**플러그인 toolchain (어떤 에이전트도 수정 불가):** `$CLAUDE_PLUGIN_ROOT` 하위의 ai-pipe 플러그인 자체(hooks/agents/skills/scripts)는 **에이전트를 통치하는 toolchain** 이다 — `project-ops` 를 포함해 **어떤 에이전트도 수정하지 않는다**(프로젝트 설정과 다른 범주: 설정은 데이터, toolchain 은 규칙 자체). `verify-boundary.sh` 가 모든 서브에이전트의 `$CLAUDE_PLUGIN_ROOT` 하위 `Edit`/`Write` 를 차단한다. **단 Bash 파일 쓰기(`sed -i`, `>`, `tee`, 스크립트 실행)는 hook 이 막지 못한다**(advisory 공백, N25) — toolchain 을 Bash 로 재작성하지 말 것. 변경이 필요하면 메인 세션에 회부하고 자체 적용하지 않는다. (실증: 서브에이전트의 Bash 훅 재작성이 한 번 훅을 무력화해 모든 Bash 가 차단된 적 있음 — Edit 경로만 hook 이 막는다.)
+
 ## 3. Git Operations
 
 `verify-git-safety.sh`가 다음 명령을 차단한다 (exit 2):
